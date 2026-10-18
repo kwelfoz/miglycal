@@ -74,7 +74,7 @@ fun Txt(
     align: TextAlign? = null,
 ) {
     Text(
-        text = text,
+        text = localizeText(text, LocalLanguage.current),
         modifier = modifier,
         color = color,
         fontSize = size,
@@ -240,6 +240,7 @@ fun TrackRow(
     selected: Boolean = false,
     menu: List<Pair<String, () -> Unit>> = emptyList(),
     onArtistClick: ((String) -> Unit)? = null,
+    showCover: Boolean = false,
 ) {
     val p = LocalPal.current
     var open by remember { mutableStateOf(false) }
@@ -257,6 +258,10 @@ fun TrackRow(
             else -> label
         }
         Txt(prefix, color = if (playing || selected) p.accent else p.dim, modifier = Modifier.width(34.dp), maxLines = 1)
+        if (showCover) {
+            CoverImage(track.path, Modifier.size(42.dp))
+            androidx.compose.foundation.layout.Spacer(Modifier.width(10.dp))
+        }
         Column(Modifier.weight(1f).padding(vertical = 8.dp)) {
             Txt(track.title, color = if (playing) p.accent else p.text, bold = playing, maxLines = 1)
             Row(verticalAlignment = Alignment.CenterVertically) {
