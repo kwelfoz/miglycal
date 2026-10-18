@@ -54,6 +54,8 @@ fun localizeText(raw: String, language: String): String {
         "nenhuma. bloqueia pastas na biblioteca." to "none. block folders from the library.",
         "desbloquear" to "unblock",
         "sobre" to "about",
+        "vazia. abre uma pasta na biblioteca e usa selecionar > +playlist." to "empty. Open a folder in the library and use select > +playlist.",
+        "a carregar letra..." to "loading lyrics...",
         "dar acesso" to "grant access",
         "o miglycal precisa de acesso ao áudio do telemóvel para listar a tua música (flac e mp3)." to "Miglycal needs audio access to list the music on your phone (FLAC and MP3).",
         "a procurar música..." to "scanning for music...",
@@ -170,6 +172,7 @@ fun localizeText(raw: String, language: String): String {
             .replace("a procurar tags:", "searching tags:")
             .replace("pesquisa de tags falhou:", "tag search failed:")
             .replace("tags selecionadas:", "selected tags:")
+            .replace("escolhida:", "selected:")
             .replace("confirma e guarda.", "confirm and save.")
             .replace("a procurar capas:", "searching artwork:")
             .replace("a procurar letra:", "searching lyrics:")
@@ -192,6 +195,9 @@ fun localizeText(raw: String, language: String): String {
             .replace("toca num para escolher.", "tap one to choose.")
             .replace("as faixas desta pasta (e subpastas) deixam de aparecer na biblioteca. podes desbloquear nas definições.", "tracks in this folder (and subfolders) will no longer appear in the library. You can unblock them in Settings.")
             .replace("as faixas desta pasta deixam de aparecer na biblioteca.", "tracks in this folder will no longer appear in the library.")
+            .replace(" será apagada (as músicas não são apagadas).", " will be deleted (the music files will not be deleted).")
+            .replace("a carregar letra...", "loading lyrics...")
+            .replace("vazia. abre uma pasta na biblioteca e usa selecionar > +playlist.", "empty. Open a folder in the library and use select > +playlist.")
     } else {
         out = out
             .replace(Regex("^(\\d+) tracks · (\\d+) folders$"), "$1 faixas · $2 pastas")
@@ -229,6 +235,9 @@ fun localizeText(raw: String, language: String): String {
             .replace("tap one to choose.", "toca num para escolher.")
             .replace("tracks in this folder (and subfolders) will no longer appear in the library. You can unblock them in Settings.", "as faixas desta pasta (e subpastas) deixam de aparecer na biblioteca. podes desbloquear nas definições.")
             .replace("tracks in this folder will no longer appear in the library.", "as faixas desta pasta deixam de aparecer na biblioteca.")
+            .replace(" will be deleted (the music files will not be deleted).", " será apagada (as músicas não são apagadas).")
+            .replace("loading lyrics...", "a carregar letra...")
+            .replace("empty. Open a folder in the library and use select > +playlist.", "vazia. abre uma pasta na biblioteca e usa selecionar > +playlist.")
     }
 
     return when {
