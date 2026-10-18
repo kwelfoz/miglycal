@@ -9,7 +9,7 @@ class Store(ctx: Context) {
     private val sp = ctx.getSharedPreferences("miglycal", Context.MODE_PRIVATE)
 
     var lastFmApiKey: String
-        get() = sp.getString("lastfm_api_key", "") ?: ""
+        get() = sp.getString("lastfm_api_key", "05334d33b73aa1d8a79d12d0dcddadfb") ?: "05334d33b73aa1d8a79d12d0dcddadfb"
         set(v) = sp.edit().putString("lastfm_api_key", v.trim()).apply()
 
     var accent: String
