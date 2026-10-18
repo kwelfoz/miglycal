@@ -14,23 +14,32 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Aceitar licenças do Android SDK (o SDK já vem instalado no runner)
-        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+      - name: Verificar e preparar chave de assinatura permanente
+        env:
+          MIGLYCAL_KEYSTORE_BASE64: ${{ secrets.MIGLYCAL_KEYSTORE_BASE64 }}
+          MIGLYCAL_KEYSTORE_PASSWORD: ${{ secrets.MIGLYCAL_KEYSTORE_PASSWORD }}
+          MIGLYCAL_KEY_ALIAS: ${{ secrets.MIGLYCAL_KEY_ALIAS }}
+          MIGLYCAL_KEY_PASSWORD: ${{ secrets.MIGLYCAL_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$MIGLYCAL_KEYSTORE_BASE64" || { echo "Falta o secret MIGLYCAL_KEYSTORE_BASE64"; exit 1; }
+          test -n "$MIGLYCAL_KEYSTORE_PASSWORD" || { echo "Falta o secret MIGLYCAL_KEYSTORE_PASSWORD"; exit 1; }
+          test -n "$MIGLYCAL_KEY_ALIAS" || { echo "Falta o secret MIGLYCAL_KEY_ALIAS"; exit 1; }
+          test -n "$MIGLYCAL_KEY_PASSWORD" || { echo "Falta o secret MIGLYCAL_KEY_PASSWORD"; exit 1; }
+
+          echo "$MIGLYCAL_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/miglycal-release.jks"
+          test -s "$RUNNER_TEMP/miglycal-release.jks"
+          echo "MIGLYCAL_KEYSTORE_PATH=$RUNNER_TEMP/miglycal-release.jks" >> "$GITHUB_ENV"
 
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.14.3"
 
-      - name: Chave de debug (para assinar o APK)
-        run: |
-          mkdir -p ~/.android
-          if [ ! -f ~/.android/debug.keystore ]; then
-            keytool -genkeypair -keystore ~/.android/debug.keystore -storepass android -keypass android \
-              -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
-              -dname "CN=Android Debug,O=Android,C=US"
-          fi
-
-      - name: Compilar APK
+      - name: Compilar APK assinado
+        env:
+          MIGLYCAL_KEYSTORE_PASSWORD: ${{ secrets.MIGLYCAL_KEYSTORE_PASSWORD }}
+          MIGLYCAL_KEY_ALIAS: ${{ secrets.MIGLYCAL_KEY_ALIAS }}
+          MIGLYCAL_KEY_PASSWORD: ${{ secrets.MIGLYCAL_KEY_PASSWORD }}
         run: gradle assembleRelease --no-daemon --stacktrace
 
       - name: Guardar APK
