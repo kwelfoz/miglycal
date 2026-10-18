@@ -8,6 +8,10 @@ import org.json.JSONObject
 class Store(ctx: Context) {
     private val sp = ctx.getSharedPreferences("miglycal", Context.MODE_PRIVATE)
 
+    var lastFmApiKey: String
+        get() = sp.getString("lastfm_api_key", "") ?: ""
+        set(v) = sp.edit().putString("lastfm_api_key", v.trim()).apply()
+
     var accent: String
         get() = sp.getString("accent", "green") ?: "green"
         set(v) = sp.edit().putString("accent", v).apply()
