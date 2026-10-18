@@ -38,10 +38,11 @@ fun MiglycalApp(vm: AppViewModel, hasPermission: Boolean, requestPermission: () 
     MiglycalTheme(accent) {
         val p = LocalPal.current
         Box(Modifier.fillMaxSize().background(p.bg)) {
-            if (!hasPermission) {
-                Box(Modifier.statusBarsPadding().navigationBarsPadding()) { PermissionScreen(requestPermission) }
-            } else {
-                MainShell(vm)
+            val setupCompleted by vm.setupCompleted.collectAsState()
+            when {
+                !setupCompleted -> FirstRunSetupScreen(vm)
+                !hasPermission -> Box(Modifier.statusBarsPadding().navigationBarsPadding()) { PermissionScreen(requestPermission) }
+                else -> MainShell(vm)
             }
         }
     }
@@ -54,7 +55,6 @@ private fun MainShell(vm: AppViewModel) {
     var full by remember { mutableStateOf(false) }
     var addTarget by remember { mutableStateOf<List<Track>?>(null) }
     val top = stack.lastOrNull()
-    val lastFmApiKey by vm.lastFmApiKey.collectAsState()
     val focusMode = top is DTags // no editor de etiquetas esconde mini leitor e navegação
 
     fun pop() { if (stack.isNotEmpty()) stack.removeAt(stack.lastIndex) }
@@ -78,7 +78,7 @@ private fun MainShell(vm: AppViewModel) {
                         openArtist = { stack.add(DArtist(it)) },
                     )
                     is DTags -> TagEditorScreen(vm, d.track) { pop() }
-                    is DArtist -> ArtistScreen(d.name, lastFmApiKey) { pop() }
+                    is DArtist -> ArtistScreen(d.name, vm) { pop() }
                     null -> when (tab) {
                         "biblioteca" -> LibraryScreen(
                             vm,
