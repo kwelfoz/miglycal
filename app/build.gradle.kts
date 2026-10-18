@@ -16,11 +16,26 @@ android {
         versionName = "1.2.6"
     }
 
+    signingConfigs {
+        create("release") {
+            // A chave é fornecida apenas pelo GitHub Actions Secrets.
+            // Nunca guardar o keystore ou as passwords no repositório.
+            val keystorePath = System.getenv("MIGLYCAL_KEYSTORE_PATH")
+            val keystorePassword = System.getenv("MIGLYCAL_KEYSTORE_PASSWORD")
+            val keyAliasValue = System.getenv("MIGLYCAL_KEY_ALIAS")
+            val keyPasswordValue = System.getenv("MIGLYCAL_KEY_PASSWORD")
+
+            if (!keystorePath.isNullOrBlank()) storeFile = file(keystorePath)
+            if (!keystorePassword.isNullOrBlank()) storePassword = keystorePassword
+            if (!keyAliasValue.isNullOrBlank()) keyAlias = keyAliasValue
+            if (!keyPasswordValue.isNullOrBlank()) keyPassword = keyPasswordValue
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
-            // Assinado com a chave de debug para poderes instalar o APK diretamente.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 
