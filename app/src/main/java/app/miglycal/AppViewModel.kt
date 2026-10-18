@@ -28,17 +28,23 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val all = MutableStateFlow<List<Track>>(emptyList())
     val blocked = MutableStateFlow(store.blocked)
     val accent = MutableStateFlow(Accent.from(store.accent))
-    val lastFmApiKey = MutableStateFlow(store.lastFmApiKey)
+    val musicFolders = MutableStateFlow(store.musicFolders)
+    val setupCompleted = MutableStateFlow(store.setupCompleted)
     val playlists = MutableStateFlow(store.loadPlaylists())
     val loading = MutableStateFlow(false)
 
     /** Faixas visíveis (sem as pastas bloqueadas). */
-    val tracks: StateFlow<List<Track>> = combine(all, blocked) { a, b ->
-        a.filter { t -> b.none { f -> t.folder == f || t.path.startsWith("$f/") } }
+    val tracks: StateFlow<List<Track>> = combine(all, blocked, musicFolders) { a, b, folders ->
+        a.filter { t ->
+            folders.any { root ->
+                val normalized = root.trimEnd('/')
+                t.path == normalized || t.path.startsWith("$normalized/")
+            } && b.none { f -> t.folder == f || t.path.startsWith("$f/") }
+        }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val allByPath: StateFlow<Map<String, Track>> =
-        all.map { l -> l.associateBy { it.path } }
+        tracks.map { l -> l.associateBy { it.path } }
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
     fun refresh() {
@@ -54,9 +60,24 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     // ------------------------------------------------------------ definições
 
-    fun setLastFmApiKey(key: String) {
-        store.lastFmApiKey = key
-        lastFmApiKey.value = key.trim()
+    fun addMusicFolder(path: String) {
+        val normalized = path.trimEnd('/').ifBlank { "/" }
+        val next = musicFolders.value + normalized
+        store.musicFolders = next
+        musicFolders.value = next
+    }
+
+    fun removeMusicFolder(path: String) {
+        val next = musicFolders.value - path
+        store.musicFolders = next
+        musicFolders.value = next
+    }
+
+    fun completeSetup() {
+        if (musicFolders.value.isEmpty()) return
+        store.setupCompleted = true
+        setupCompleted.value = true
+        refresh()
     }
 
     fun setAccent(a: Accent) {
