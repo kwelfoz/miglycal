@@ -28,6 +28,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val all = MutableStateFlow<List<Track>>(emptyList())
     val blocked = MutableStateFlow(store.blocked)
     val accent = MutableStateFlow(Accent.from(store.accent))
+    val language = MutableStateFlow(store.language)
     val musicFolders = MutableStateFlow(store.musicFolders)
     val setupCompleted = MutableStateFlow(store.setupCompleted)
     val playlists = MutableStateFlow(store.loadPlaylists())
@@ -86,6 +87,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         refresh()
     }
 
+    fun setLanguage(value: String) {
+        val safe = if (value == "en") "en" else "pt"
+        store.language = safe
+        language.value = safe
+    }
+
     fun setAccent(a: Accent) {
         store.accent = a.key
         accent.value = a
@@ -137,6 +144,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun playTracks(list: List<Track>, index: Int) =
         player.play(list, index, store.shuffle, store.repeat)
+
+    fun queueTracks(list: List<Track>) = player.enqueue(list)
 
     fun playShuffled(list: List<Track>) {
         if (list.isEmpty()) return
