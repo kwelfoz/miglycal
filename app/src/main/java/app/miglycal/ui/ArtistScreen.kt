@@ -1,5 +1,6 @@
 package app.miglycal.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,7 +30,9 @@ import app.miglycal.data.ArtistInfo
 import app.miglycal.data.ArtistNames
 import app.miglycal.data.ArtistOnline
 import app.miglycal.data.Track
-import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
+import coil.compose.SubcomposeAsyncImageContent
+import coil.compose.AsyncImagePainter
 
 @Composable
 fun ArtistScreen(name: String, vm: AppViewModel, back: () -> Unit) {
@@ -61,12 +64,28 @@ fun ArtistScreen(name: String, vm: AppViewModel, back: () -> Unit) {
         ) {
             Spacer(Modifier.height(12.dp))
             if (info?.imageUrl != null) {
-                AsyncImage(
+                SubcomposeAsyncImage(
                     model = info?.imageUrl,
                     contentDescription = "Artist photo",
-                    modifier = Modifier.fillMaxWidth().height(190.dp),
+                    modifier = Modifier.fillMaxWidth().height(190.dp).background(p.surface),
                     contentScale = ContentScale.Crop,
-                )
+                ) {
+                    when (state) {
+                        is AsyncImagePainter.State.Success -> SubcomposeAsyncImageContent()
+                        is AsyncImagePainter.State.Error -> Box(
+                            Modifier.fillMaxSize().background(p.surface),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Txt("fotografia indisponível", color = p.dim, size = 11.sp)
+                        }
+                        else -> Box(
+                            Modifier.fillMaxSize().background(p.surface),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Txt("a carregar fotografia...", color = p.dim, size = 11.sp)
+                        }
+                    }
+                }
                 Spacer(Modifier.height(12.dp))
             }
             Txt(info?.name ?: name, color = p.accent, size = 21.sp, bold = true)
