@@ -50,8 +50,7 @@ fun FirstRunSetupScreen(vm: AppViewModel) {
             verticalArrangement = Arrangement.Center,
         ) {
             Box(
-                Modifier.size(156.dp).background(androidx.compose.ui.graphics.Color(0xFF101010))
-                    .padding(10.dp),
+                Modifier.size(156.dp).padding(10.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Image(
