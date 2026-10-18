@@ -96,6 +96,19 @@ class PlayerController(private val ctx: Context) {
         p.play()
     }
 
+    /** Appends selected tracks to the end of the current playback queue. */
+    fun enqueue(list: List<Track>) = withMc { p ->
+        if (list.isEmpty()) return@withMc
+        val items = list.map(::item)
+        if (p.mediaItemCount == 0) {
+            p.setMediaItems(items, 0, 0L)
+            p.prepare()
+            p.play()
+        } else {
+            p.addMediaItems(p.mediaItemCount, items)
+        }
+    }
+
     fun toggle() = withMc { if (it.isPlaying) it.pause() else it.play() }
     fun next() = withMc { it.seekToNext() }
     fun prev() = withMc { it.seekToPrevious() }
