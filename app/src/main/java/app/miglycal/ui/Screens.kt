@@ -39,6 +39,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.miglycal.AppViewModel
+import app.miglycal.BuildConfig
 import app.miglycal.data.Library
 import app.miglycal.data.Rep
 import app.miglycal.data.Track
@@ -165,13 +166,21 @@ fun FolderScreen(
 
     Column(Modifier.fillMaxSize()) {
         Prompt(Library.shortPath(folder)) { Btn("voltar", back) }
-        Row(Modifier.padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Flow(Modifier.padding(horizontal = 10.dp)) {
             if (!selecting) {
                 Btn("tocar", { vm.playTracks(list, 0) }, enabled = list.isNotEmpty())
                 Btn("aleat.", { vm.playShuffled(list) }, enabled = list.isNotEmpty())
                 Btn("selecionar", { selecting = true; sel = emptySet() })
             } else {
-                Btn("todas", { sel = list.map { it.path }.toSet() })
+                val allSelected = list.isNotEmpty() && sel.size == list.size
+                Btn(if (allSelected) "limpar" else "todas", {
+                    sel = if (allSelected) emptySet() else list.map { it.path }.toSet()
+                })
+                Btn("fila", {
+                    vm.queueTracks(list.filter { it.path in sel })
+                    selecting = false
+                    sel = emptySet()
+                }, active = sel.isNotEmpty(), enabled = sel.isNotEmpty())
                 Btn("+playlist", {
                     addToPlaylist(list.filter { it.path in sel })
                     selecting = false
@@ -300,6 +309,7 @@ fun PlaylistScreen(vm: AppViewModel, id: String, back: () -> Unit, openTags: (Tr
                             "editar etiquetas" to { openTags(t) },
                         ),
                         onArtistClick = openArtist,
+                        showCover = true,
                     )
                 } else {
                     Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -354,12 +364,19 @@ fun AddToPlaylistDialog(vm: AppViewModel, tracks: List<Track>, onDone: () -> Uni
 fun SettingsScreen(vm: AppViewModel) {
     val p = LocalPal.current
     val accent by vm.accent.collectAsState()
+    val language by vm.language.collectAsState()
     val blocked by vm.blocked.collectAsState()
 
     Column(Modifier.fillMaxSize()) {
         Prompt("definições")
         Rule()
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
+            Section("Idioma")
+            Flow {
+                Btn("Português", { vm.setLanguage("pt") }, active = language == "pt")
+                Btn("English", { vm.setLanguage("en") }, active = language == "en")
+            }
+
             Section("paleta")
             Flow {
                 Accent.entries.forEach { a ->
@@ -385,7 +402,7 @@ fun SettingsScreen(vm: AppViewModel) {
             }
 
             Section("sobre")
-            Txt("miglycal v1.0", color = p.dim)
+            Txt("miglycal v${BuildConfig.VERSION_NAME}", color = p.dim)
             Txt("flac // mp3", color = p.dim, size = 11.sp)
         }
     }
