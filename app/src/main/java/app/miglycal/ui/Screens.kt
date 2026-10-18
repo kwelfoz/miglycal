@@ -71,6 +71,7 @@ fun LibraryScreen(
     openFolder: (String) -> Unit,
     openTags: (Track) -> Unit,
     addToPlaylist: (List<Track>) -> Unit,
+    openArtist: (String) -> Unit = {},
 ) {
     val p = LocalPal.current
     val tracks by vm.tracks.collectAsState()
@@ -127,6 +128,7 @@ fun LibraryScreen(
                             "adicionar à playlist" to { addToPlaylist(listOf(t)) },
                             "editar etiquetas" to { openTags(t) },
                         ),
+                        onArtistClick = openArtist,
                     )
                 }
             }
@@ -151,6 +153,7 @@ fun FolderScreen(
     back: () -> Unit,
     openTags: (Track) -> Unit,
     addToPlaylist: (List<Track>) -> Unit,
+    openArtist: (String) -> Unit = {},
 ) {
     val p = LocalPal.current
     val all by vm.tracks.collectAsState()
@@ -198,6 +201,7 @@ fun FolderScreen(
                         "adicionar à playlist" to { addToPlaylist(listOf(t)) },
                         "editar etiquetas" to { openTags(t) },
                     ),
+                    onArtistClick = openArtist,
                 )
             }
         }
@@ -255,7 +259,7 @@ fun PlaylistsScreen(vm: AppViewModel, open: (String) -> Unit) {
 }
 
 @Composable
-fun PlaylistScreen(vm: AppViewModel, id: String, back: () -> Unit, openTags: (Track) -> Unit) {
+fun PlaylistScreen(vm: AppViewModel, id: String, back: () -> Unit, openTags: (Track) -> Unit, openArtist: (String) -> Unit = {}) {
     val p = LocalPal.current
     val pls by vm.playlists.collectAsState()
     val byPath by vm.allByPath.collectAsState()
@@ -295,6 +299,7 @@ fun PlaylistScreen(vm: AppViewModel, id: String, back: () -> Unit, openTags: (Tr
                             "remover da playlist" to { vm.removeFromPlaylist(pl.id, path) },
                             "editar etiquetas" to { openTags(t) },
                         ),
+                        onArtistClick = openArtist,
                     )
                 } else {
                     Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -351,6 +356,7 @@ fun SettingsScreen(vm: AppViewModel) {
     val ctx = LocalContext.current
     val accent by vm.accent.collectAsState()
     val blocked by vm.blocked.collectAsState()
+    val lastFmApiKey by vm.lastFmApiKey.collectAsState()
 
     Column(Modifier.fillMaxSize()) {
         Prompt("definições")
@@ -378,6 +384,9 @@ fun SettingsScreen(vm: AppViewModel) {
                 Rule()
             }
 
+            Section("Last.fm")
+            Txt("Chave da API para carregar foto e biografia dos artistas. Podes obter uma chave de aplicação no site Last.fm.", color = p.dim, size = 11.sp)
+            TermField("API key", lastFmApiKey, { vm.setLastFmApiKey(it) })
             Section("sobre")
             Txt("miglycal v1.0", color = p.dim)
             Txt("flac // mp3", color = p.dim, size = 11.sp)

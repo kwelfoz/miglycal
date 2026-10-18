@@ -30,6 +30,7 @@ sealed interface Detail
 data class DFolder(val path: String) : Detail
 data class DPlaylist(val id: String) : Detail
 data class DTags(val track: Track) : Detail
+data class DArtist(val name: String) : Detail
 
 @Composable
 fun MiglycalApp(vm: AppViewModel, hasPermission: Boolean, requestPermission: () -> Unit) {
@@ -53,6 +54,7 @@ private fun MainShell(vm: AppViewModel) {
     var full by remember { mutableStateOf(false) }
     var addTarget by remember { mutableStateOf<List<Track>?>(null) }
     val top = stack.lastOrNull()
+    val lastFmApiKey by vm.lastFmApiKey.collectAsState()
     val focusMode = top is DTags // no editor de etiquetas esconde mini leitor e navegação
 
     fun pop() { if (stack.isNotEmpty()) stack.removeAt(stack.lastIndex) }
@@ -68,18 +70,22 @@ private fun MainShell(vm: AppViewModel) {
                         vm, d.path, back = { pop() },
                         openTags = { stack.add(DTags(it)) },
                         addToPlaylist = { addTarget = it },
+                        openArtist = { stack.add(DArtist(it)) },
                     )
                     is DPlaylist -> PlaylistScreen(
                         vm, d.id, back = { pop() },
                         openTags = { stack.add(DTags(it)) },
+                        openArtist = { stack.add(DArtist(it)) },
                     )
                     is DTags -> TagEditorScreen(vm, d.track) { pop() }
+                    is DArtist -> ArtistScreen(d.name, lastFmApiKey) { pop() }
                     null -> when (tab) {
                         "biblioteca" -> LibraryScreen(
                             vm,
                             openFolder = { stack.add(DFolder(it)) },
                             openTags = { stack.add(DTags(it)) },
                             addToPlaylist = { addTarget = it },
+                            openArtist = { stack.add(DArtist(it)) },
                         )
                         "playlists" -> PlaylistsScreen(vm) { stack.add(DPlaylist(it)) }
                         else -> SettingsScreen(vm)

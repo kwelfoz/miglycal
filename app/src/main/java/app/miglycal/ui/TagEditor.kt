@@ -44,6 +44,7 @@ import app.miglycal.AppViewModel
 import app.miglycal.data.Art
 import app.miglycal.data.CoverCandidate
 import app.miglycal.data.Lyrics
+import app.miglycal.data.LyricsCandidate
 import app.miglycal.data.LyricsStore
 import app.miglycal.data.Online
 import app.miglycal.data.TagIO
@@ -77,12 +78,19 @@ fun TagEditorScreen(vm: AppViewModel, track: Track, back: () -> Unit) {
 
     // capas
     var candidates by remember { mutableStateOf<List<CoverCandidate>>(emptyList()) }
+    var manualCoverSearch by remember { mutableStateOf(false) }
+    var coverSearchArtist by remember(track.path) { mutableStateOf(fallback.artist) }
+    var coverSearchAlbum by remember(track.path) { mutableStateOf(fallback.album.ifBlank { fallback.title }) }
     var cover by remember { mutableStateOf<ByteArray?>(null) }
     val stagedBmp = remember(cover) { cover?.let { Art.decode(it, 400) } }
 
     // letras
     var lyrics by remember { mutableStateOf<Lyrics?>(null) }
     var useSynced by remember { mutableStateOf(true) }
+    var manualLyricsSearch by remember { mutableStateOf(false) }
+    var lyricsSearchArtist by remember(track.path) { mutableStateOf(fallback.artist) }
+    var lyricsSearchTitle by remember(track.path) { mutableStateOf(fallback.title) }
+    var lyricCandidates by remember { mutableStateOf<List<LyricsCandidate>>(emptyList()) }
 
     fun say(s: String) { log.add(s) }
 
@@ -168,10 +176,36 @@ fun TagEditorScreen(vm: AppViewModel, track: Track, back: () -> Unit) {
                     candidates = runCatching { Online.covers(tags.artist, album) }
                         .onFailure { say("! ${it.message}") }
                         .getOrDefault(emptyList())
+                    if (candidates.isEmpty()) {
+                        coverSearchArtist = tags.artist
+                        coverSearchAlbum = album
+                        manualCoverSearch = true
+                    }
                     say("> ${candidates.size} resultado(s). toca num para escolher.")
                     busy = false
                 }
             }, enabled = !busy)
+            Btn("pesquisa manual", { 
+                coverSearchArtist = tags.artist
+                coverSearchAlbum = tags.album.ifBlank { tags.title }
+                manualCoverSearch = !manualCoverSearch
+            }, active = manualCoverSearch)
+            if (manualCoverSearch) {
+                TermField("artista", coverSearchArtist, { coverSearchArtist = it })
+                TermField("álbum", coverSearchAlbum, { coverSearchAlbum = it })
+                Btn("pesquisar capa", {
+                    scope.launch {
+                        busy = true
+                        say("> pesquisa manual de capa: $coverSearchArtist - $coverSearchAlbum")
+                        candidates = runCatching { Online.covers(coverSearchArtist, coverSearchAlbum) }
+                            .onFailure { say("! ${it.message}") }
+                            .getOrDefault(emptyList())
+                        say("> ${candidates.size} opção(ões) encontradas.")
+                        busy = false
+                    }
+                }, enabled = !busy && (coverSearchArtist.isNotBlank() || coverSearchAlbum.isNotBlank()), active = true)
+                if (candidates.isEmpty() && !busy) Txt("> sem resultados para esta pesquisa.", color = p.dim, size = 11.sp)
+            }
             candidates.forEach { c ->
                 Row(
                     Modifier.fillMaxWidth().clickable {
@@ -203,6 +237,11 @@ fun TagEditorScreen(vm: AppViewModel, track: Track, back: () -> Unit) {
                         .getOrNull()
                     lyrics = r
                     useSynced = r?.synced != null
+                    if (r == null) {
+                        lyricsSearchArtist = tags.artist
+                        lyricsSearchTitle = tags.title
+                        manualLyricsSearch = true
+                    }
                     say(
                         when {
                             r == null -> "> não encontrada."
@@ -214,6 +253,48 @@ fun TagEditorScreen(vm: AppViewModel, track: Track, back: () -> Unit) {
                     busy = false
                 }
             }, enabled = !busy)
+            Btn("pesquisa manual", {
+                lyricsSearchArtist = tags.artist
+                lyricsSearchTitle = tags.title
+                manualLyricsSearch = !manualLyricsSearch
+            }, active = manualLyricsSearch)
+            if (manualLyricsSearch) {
+                TermField("artista", lyricsSearchArtist, { lyricsSearchArtist = it })
+                TermField("música", lyricsSearchTitle, { lyricsSearchTitle = it })
+                Btn("pesquisar letras", {
+                    scope.launch {
+                        busy = true
+                        say("> pesquisa manual de letra: $lyricsSearchArtist - $lyricsSearchTitle")
+                        lyricCandidates = runCatching { Online.searchLyrics(lyricsSearchArtist, lyricsSearchTitle) }
+                            .onFailure { say("! ${it.message}") }
+                            .getOrDefault(emptyList())
+                        say("> ${lyricCandidates.size} opção(ões) encontradas.")
+                        busy = false
+                    }
+                }, enabled = !busy && (lyricsSearchArtist.isNotBlank() || lyricsSearchTitle.isNotBlank()), active = true)
+                if (lyricCandidates.isEmpty() && !busy) Txt("> sem resultados. Experimenta outro título ou artista.", color = p.dim, size = 11.sp)
+                lyricCandidates.forEach { candidate ->
+                    Row(
+                        Modifier.fillMaxWidth().clickable {
+                            lyrics = candidate.lyrics
+                            useSynced = candidate.lyrics.synced != null
+                            say("> escolhida: ${candidate.label}")
+                        }.padding(vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Txt(candidate.label, size = 11.sp, maxLines = 3)
+                            Txt("tocar para selecionar", color = p.dim, size = 10.sp)
+                        }
+                        Btn("usar", {
+                            lyrics = candidate.lyrics
+                            useSynced = candidate.lyrics.synced != null
+                            say("> escolhida: ${candidate.label}")
+                        }, active = true, size = 10.sp)
+                    }
+                    Rule()
+                }
+            }
             lyrics?.let { l ->
                 Row {
                     if (l.synced != null) Btn("sincronizada", { useSynced = true }, active = useSynced)

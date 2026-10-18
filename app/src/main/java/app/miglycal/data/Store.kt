@@ -7,6 +7,11 @@ import org.json.JSONObject
 /** Definições e playlists, guardadas localmente. */
 class Store(ctx: Context) {
     private val sp = ctx.getSharedPreferences("miglycal", Context.MODE_PRIVATE)
+    private val bundledLastFmApiKey = "05334d33b73aa1d8a79d12d0dcddadfb"
+
+    var lastFmApiKey: String
+        get() = sp.getString("lastfm_api_key", null)?.takeIf { it.isNotBlank() } ?: bundledLastFmApiKey
+        set(v) = sp.edit().putString("lastfm_api_key", v.trim()).apply()
 
     var accent: String
         get() = sp.getString("accent", "green") ?: "green"

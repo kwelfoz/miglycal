@@ -73,6 +73,7 @@ data class AudioInfo(
 data class CoverCandidate(val label: String, val previewUrl: String, val fullUrl: String)
 
 data class Lyrics(val synced: String?, val plain: String?)
+data class LyricsCandidate(val label: String, val lyrics: Lyrics)
 
 data class LrcLine(val ms: Long, val text: String)
 

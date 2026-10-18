@@ -122,6 +122,29 @@ object Online {
             }.getOrNull()
         }
 
+    /** Pesquisa manual: devolve várias correspondências para o utilizador escolher. */
+    suspend fun searchLyrics(artist: String, title: String): List<LyricsCandidate> = withContext(Dispatchers.IO) {
+        if (artist.isBlank() && title.isBlank()) return@withContext emptyList()
+        val q = "artist_name=${enc(artist)}&track_name=${enc(title)}"
+        val arr = JSONArray(text("https://lrclib.net/api/search?$q"))
+        val out = mutableListOf<LyricsCandidate>()
+        for (i in 0 until arr.length()) {
+            val item = arr.optJSONObject(i) ?: continue
+            val l = parseLyrics(item)
+            if (l.synced.isNullOrBlank() && l.plain.isNullOrBlank()) continue
+            val artistName = item.optString("artistName", artist)
+            val trackName = item.optString("trackName", title)
+            val albumName = item.optString("albumName").takeIf { it.isNotBlank() }
+            val label = buildString {
+                append(artistName).append(" — ").append(trackName)
+                if (albumName != null) append(" [").append(albumName).append("]")
+                append(if (l.synced != null) " · sincronizada" else " · normal")
+            }
+            out += LyricsCandidate(label, l)
+        }
+        out.distinctBy { it.label }.sortedByDescending { it.lyrics.synced != null }.take(20)
+    }
+
     private fun parseLyrics(o: JSONObject): Lyrics {
         fun s(k: String): String? = if (o.isNull(k)) null else o.optString(k).ifBlank { null }
         return Lyrics(synced = s("syncedLyrics"), plain = s("plainLyrics"))
