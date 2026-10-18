@@ -15,6 +15,10 @@ class Store(ctx: Context) {
         get() = (sp.getStringSet("music_folders", emptySet()) ?: emptySet()).toSet()
         set(v) = sp.edit().putStringSet("music_folders", v.toSet()).apply()
 
+    var language: String
+        get() = sp.getString("language", "pt") ?: "pt"
+        set(v) = sp.edit().putString("language", v).apply()
+
     var accent: String
         get() = sp.getString("accent", "green") ?: "green"
         set(v) = sp.edit().putString("accent", v).apply()
