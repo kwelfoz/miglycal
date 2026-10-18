@@ -2,7 +2,7 @@ package app.miglycal.ui
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -71,7 +71,6 @@ fun FirstRunSetupScreen(vm: AppViewModel) {
 @Composable
 fun MusicFoldersPicker(vm: AppViewModel) {
     val p = LocalPal.current
-    val context = LocalContext.current
     val folders by vm.musicFolders.collectAsState()
     var pickerError by remember { mutableStateOf<String?>(null) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
