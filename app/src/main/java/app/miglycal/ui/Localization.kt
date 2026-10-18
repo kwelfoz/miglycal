@@ -1,19 +1,19 @@
 package app.miglycal.ui
 
 /**
- * Interface text translations. Music metadata, file names, and artist biographies remain untouched.
- * The app deliberately keeps this small dictionary central so Portuguese/English stays consistent.
+ * Central translations for visible interface text. Artist biographies, song metadata,
+ * playlist names and file/folder names are content and should not be translated.
  */
 fun localizeText(raw: String, language: String): String {
     val english = language == "en"
     val bracketed = raw.startsWith("[") && raw.endsWith("]") && raw.length >= 2
-    val marked = raw.startsWith("# ") || raw.startsWith("> ") || raw.startsWith("! ")
     val marker = when {
         raw.startsWith("# ") -> "# "
         raw.startsWith("> ") -> "> "
         raw.startsWith("! ") -> "! "
         else -> ""
     }
+    val marked = marker.isNotEmpty()
     val value = when {
         bracketed -> raw.substring(1, raw.length - 1)
         marked -> raw.removePrefix(marker)
@@ -33,11 +33,11 @@ fun localizeText(raw: String, language: String): String {
         "tocar" to "play",
         "aleat." to "shuffle",
         "selecionar" to "select",
-        "todas" to "all",
+        "todas" to "select all",
+        "limpar" to "clear selection",
         "fila" to "queue",
         "+playlist" to "+playlist",
         "cancelar" to "cancel",
-        "playlists" to "playlists",
         "+ nova" to "+ new",
         "nova playlist" to "new playlist",
         "criar" to "create",
@@ -54,13 +54,11 @@ fun localizeText(raw: String, language: String): String {
         "nenhuma. bloqueia pastas na biblioteca." to "none. block folders from the library.",
         "desbloquear" to "unblock",
         "sobre" to "about",
-        "flac // mp3" to "flac // mp3",
         "dar acesso" to "grant access",
         "o miglycal precisa de acesso ao áudio do telemóvel para listar a tua música (flac e mp3)." to "Miglycal needs audio access to list the music on your phone (FLAC and MP3).",
         "a procurar música..." to "scanning for music...",
         "nenhuma faixa flac/mp3 encontrada." to "no FLAC/MP3 tracks found.",
-        "a guardar..." to "saving...",
-        "guardado." to "saved.",
+        "desconhecido" to "unknown",
         "etiquetas" to "tags",
         "título" to "title",
         "artista" to "artist",
@@ -77,7 +75,6 @@ fun localizeText(raw: String, language: String): String {
         "usar" to "use",
         "capa" to "artwork",
         "atual" to "current",
-        "nova" to "new",
         "escolher ficheiro local" to "choose local file",
         "procurar capa online" to "search artwork online",
         "pesquisa manual" to "manual search",
@@ -92,68 +89,67 @@ fun localizeText(raw: String, language: String): String {
         "ao guardar: grava a letra sincronizada (formato LRC) no campo de letra do ficheiro." to "when saving: writes synced lyrics (LRC format) to the file's lyrics field.",
         "ao guardar: grava a letra normal no campo de letra do ficheiro." to "when saving: writes plain lyrics to the file's lyrics field.",
         "log" to "log",
-        "pause" to "pause",
-        "play" to "play",
+        "pause" to "pausa",
         "a tocar" to "now playing",
         "shuf" to "shuffle",
-        "Artist photo" to "Artist photo",
-        "about" to "about",
-        "show less" to "show less",
-        "read more" to "read more",
-        "in your library" to "in your library",
+        "sem capa" to "no cover",
+        "about" to "sobre",
+        "show less" to "mostrar menos",
+        "read more" to "ler mais",
+        "in your library" to "na tua biblioteca",
         "álbum desconhecido" to "unknown album",
-        "loading artist information..." to "loading artist information...",
-        "no biography available." to "no biography available.",
-        "no music by this artist was found in your selected folders." to "no music by this artist was found in your selected folders.",
-        "track(s)" to "track(s)",
-        "Set up your music library" to "Set up your music library",
-        "Choose the folders where your music is stored and pick an accent colour. You can change these later in Settings." to "Choose the folders where your music is stored and pick an accent colour. You can change these later in Settings.",
-        "accent colour" to "accent colour",
-        "start using miglycal" to "start using miglycal",
-        "choose at least one music folder to continue." to "choose at least one music folder to continue.",
-        "This folder location is not supported. Choose a folder in shared internal storage or an SD card." to "This folder location is not supported. Choose a folder in shared internal storage or an SD card.",
-        "music folders" to "music folders",
-        "Only audio files inside these folders will appear in your library. Android opens its own folder picker; no broad storage permission is needed for selecting a folder." to "Only audio files inside these folders will appear in your library. Android opens its own folder picker; no broad storage permission is needed for selecting a folder.",
-        "add folder" to "add folder",
-        "no folders selected." to "no folders selected.",
-        "remove" to "remove",
-        "Keep at least one folder selected." to "Keep at least one folder selected.",
+        "loading artist information..." to "a carregar informações do artista...",
+        "no biography available." to "sem biografia disponível.",
+        "no music by this artist was found in your selected folders." to "não foram encontradas músicas deste artista nas pastas selecionadas.",
         "Começar agora" to "Get started",
-        "start now" to "Get started",
+        "Um leitor de música para a tua coleção local." to "A music player for your local collection.",
+        "Configuração inicial" to "Initial setup",
         "Escolhe a língua, a cor e as pastas onde guardas a tua música." to "Choose the language, accent colour and folders where your music is stored.",
         "Idioma" to "Language",
-        "Português" to "Português",
-        "English" to "English",
         "Cor de destaque" to "Accent colour",
         "Pastas de música" to "Music folders",
         "Apenas as músicas destas pastas aparecem na biblioteca. Podes alterar isto mais tarde nas definições." to "Only music in these folders appears in your library. You can change this later in Settings.",
         "Começar a usar o Miglycal" to "Start using Miglycal",
         "Escolhe pelo menos uma pasta de música para continuar." to "Choose at least one music folder to continue.",
-        "Configuração inicial" to "Initial setup",
-        "Português" to "Portuguese",
-        "English" to "English",
-        "no cover" to "no cover",
-        "read more" to "read more",
-        "show less" to "show less"
+        "Set up your music library" to "Configura a tua biblioteca de música",
+        "Choose the folders where your music is stored and pick an accent colour. You can change these later in Settings." to "Escolhe as pastas onde guardas música e uma cor de destaque. Podes alterar isto mais tarde nas definições.",
+        "accent colour" to "cor de destaque",
+        "start using miglycal" to "começar a usar o Miglycal",
+        "choose at least one music folder to continue." to "escolhe pelo menos uma pasta de música para continuar.",
+        "This folder location is not supported. Choose a folder in shared internal storage or an SD card." to "Esta localização não é suportada. Escolhe uma pasta no armazenamento interno partilhado ou num cartão SD.",
+        "music folders" to "pastas de música",
+        "Only audio files inside these folders will appear in your library. Android opens its own folder picker; no broad storage permission is needed for selecting a folder." to "Só aparecem na biblioteca os ficheiros de áudio destas pastas. O Android abre o seletor de pastas do sistema; não é necessária uma permissão geral de armazenamento para escolher uma pasta.",
+        "add folder" to "adicionar pasta",
+        "no folders selected." to "nenhuma pasta selecionada.",
+        "remove" to "remover",
+        "Keep at least one folder selected." to "Mantém pelo menos uma pasta selecionada.",
+        "verde" to "green",
+        "amarelo" to "yellow",
+        "laranja" to "orange",
+        "vermelho" to "red"
     )
 
-    var translated = if (english) pairs.firstOrNull { it.first == value }?.second
-        else pairs.firstOrNull { it.second == value }?.first
+    val translated = if (english) {
+        pairs.firstOrNull { it.first == value }?.second
+    } else {
+        pairs.firstOrNull { it.second == value }?.first
+    }
     var out = translated ?: value
 
     if (english) {
         out = out
-            .replace(Regex("^(\\d+) faixas · (\\d+) pastas$"), "$1 tracks · $2 folders")
-            .replace(Regex("^(\\d+) faixas$"), "$1 tracks")
-            .replace(Regex("^(\\d+) track\\(s\\) · (\\d+) album\\(s\\)$"), "$1 tracks · $2 albums")
-            .replace(Regex("^(\\d+) track\\(s\\)$"), "$1 tracks")
-            .replace(Regex("^adicionar (\\d+) faixa\\(s\\)$"), "add $1 track(s)")
-            .replace(Regex("^(\\d+) correspondência\\(s\\) de tags\\.$"), "$1 tag match(es).")
-            .replace(Regex("^(\\d+) resultado\\(s\\)\\."), "$1 result(s).")
-            .replace(Regex("^(\\d+) opção\\(ões\\) encontradas\\.$"), "$1 options found.")
-            .replace(Regex("^\\(em falta\\) (.+)$"), "(missing) $1")
-            .replace(Regex("^aleat:(.+)$"), "shuffle:$1")
-            .replace(Regex("^rep:(.+)$"), "repeat:$1")
+            .replace(Regex("^(\d+) faixas · (\d+) pastas$"), "$1 tracks · $2 folders")
+            .replace(Regex("^(\d+) faixas$"), "$1 tracks")
+            .replace(Regex("^(\d+) track\(s\) · (\d+) album\(s\)$"), "$1 tracks · $2 albums")
+            .replace(Regex("^(\d+) track\(s\)$"), "$1 tracks")
+            .replace(Regex("^adicionar (\d+) faixa\(s\)$"), "add $1 track(s)")
+            .replace(Regex("^(\d+) correspondência\(s\) de tags\.$"), "$1 tag match(es).")
+            .replace(Regex("^(\d+) resultado\(s\)\."), "$1 result(s).")
+            .replace(Regex("^(\d+) opção\(ões\) encontradas\.$"), "$1 options found.")
+            .replace(Regex("^(\d+) resultado\(s\) encontrado\(s\)\.$"), "$1 results found.")
+            .replace(Regex("^\(em falta\) (.+)$"), "(missing) $1")
+            .replace("aleat:", "shuffle:")
+            .replace("rep:", "repeat:")
             .replace("a procurar tags:", "searching tags:")
             .replace("pesquisa de tags falhou:", "tag search failed:")
             .replace("tags selecionadas:", "selected tags:")
@@ -169,20 +165,19 @@ fun localizeText(raw: String, language: String): String {
             .replace("não foi possível ler a imagem selecionada.", "could not read the selected image.")
             .replace("permissão recusada, nada foi guardado.", "permission denied; nothing was saved.")
             .replace("erro ao guardar:", "save error:")
-            .replace("sem capa", "no cover")
             .replace("as faixas desta pasta (e subpastas) deixam de aparecer na biblioteca. podes desbloquear nas definições.", "tracks in this folder (and subfolders) will no longer appear in the library. You can unblock them in Settings.")
             .replace("as faixas desta pasta deixam de aparecer na biblioteca.", "tracks in this folder will no longer appear in the library.")
     } else {
         out = out
-            .replace(Regex("^(\\d+) tracks · (\\d+) folders$"), "$1 faixas · $2 pastas")
-            .replace(Regex("^(\\d+) tracks$"), "$1 faixas")
-            .replace(Regex("^(\\d+) albums$"), "$1 álbuns")
-            .replace(Regex("^(\\d+) track\\(s\\) · (\\d+) album\\(s\\)$"), "$1 faixas · $2 álbuns")
-            .replace(Regex("^(\\d+) track\\(s\\)$"), "$1 faixas")
-            .replace(Regex("^add (\\d+) track\\(s\\)$"), "adicionar $1 faixa(s)")
-            .replace(Regex("^\\(missing\\) (.+)$"), "(em falta) $1")
-            .replace(Regex("^shuffle:(.+)$"), "aleat:$1")
-            .replace(Regex("^repeat:(.+)$"), "rep:$1")
+            .replace(Regex("^(\d+) tracks · (\d+) folders$"), "$1 faixas · $2 pastas")
+            .replace(Regex("^(\d+) tracks$"), "$1 faixas")
+            .replace(Regex("^(\d+) albums$"), "$1 álbuns")
+            .replace(Regex("^(\d+) track\(s\) · (\d+) album\(s\)$"), "$1 faixas · $2 álbuns")
+            .replace(Regex("^(\d+) track\(s\)$"), "$1 faixas")
+            .replace(Regex("^add (\d+) track\(s\)$"), "adicionar $1 faixa(s)")
+            .replace(Regex("^\(missing\) (.+)$"), "(em falta) $1")
+            .replace("shuffle:", "aleat:")
+            .replace("repeat:", "rep:")
             .replace("searching tags:", "a procurar tags:")
             .replace("tag search failed:", "pesquisa de tags falhou:")
             .replace("selected tags:", "tags selecionadas:")
