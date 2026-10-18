@@ -36,8 +36,7 @@ object ArtistOnline {
         val data = root.optJSONArray("data") ?: JSONArray()
         (0 until data.length())
             .mapNotNull { data.optJSONObject(it) }
-            .firstOrNull { it.optString("name").equals(name, ignoreCase = true) }
-            ?: data.optJSONObject(0)
+            .firstOrNull { it.optString("name").trim().equals(name.trim(), ignoreCase = true) }
     }.getOrNull()
 
     private fun lastFmImage(artist: JSONObject): String? {
