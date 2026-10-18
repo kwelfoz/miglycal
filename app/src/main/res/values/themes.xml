@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="mig_black">#FF080908</color>
-    <color name="ic_launcher_background">#FF080908</color>
+    <color name="ic_launcher_background">#FF101010</color>
 
     <style name="Theme.Miglycal" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/mig_black</item>
