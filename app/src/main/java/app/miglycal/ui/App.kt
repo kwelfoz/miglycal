@@ -35,7 +35,8 @@ data class DArtist(val name: String) : Detail
 @Composable
 fun MiglycalApp(vm: AppViewModel, hasPermission: Boolean, requestPermission: () -> Unit) {
     val accent by vm.accent.collectAsState()
-    MiglycalTheme(accent) {
+    val language by vm.language.collectAsState()
+    MiglycalTheme(accent, language) {
         val p = LocalPal.current
         Box(Modifier.fillMaxSize().background(p.bg)) {
             val setupCompleted by vm.setupCompleted.collectAsState()
