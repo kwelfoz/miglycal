@@ -54,6 +54,7 @@ private fun MainShell(vm: AppViewModel) {
     var full by remember { mutableStateOf(false) }
     var addTarget by remember { mutableStateOf<List<Track>?>(null) }
     val top = stack.lastOrNull()
+    val lastFmApiKey by vm.lastFmApiKey.collectAsState()
     val focusMode = top is DTags // no editor de etiquetas esconde mini leitor e navegação
 
     fun pop() { if (stack.isNotEmpty()) stack.removeAt(stack.lastIndex) }
@@ -77,7 +78,7 @@ private fun MainShell(vm: AppViewModel) {
                         openArtist = { stack.add(DArtist(it)) },
                     )
                     is DTags -> TagEditorScreen(vm, d.track) { pop() }
-                    is DArtist -> ArtistScreen(d.name, vm.lastFmApiKey.collectAsState().value) { pop() }
+                    is DArtist -> ArtistScreen(d.name, lastFmApiKey) { pop() }
                     null -> when (tab) {
                         "biblioteca" -> LibraryScreen(
                             vm,
