@@ -12,8 +12,8 @@ android {
         applicationId = "app.miglycal"
         minSdk = 26
         targetSdk = 35
-        versionCode = 124
-        versionName = "1.2.4"
+        versionCode = 126
+        versionName = "1.2.6"
     }
 
     buildTypes {
