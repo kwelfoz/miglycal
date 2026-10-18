@@ -145,6 +145,126 @@ object Online {
         out.distinctBy { it.label }.sortedByDescending { it.lyrics.synced != null }.take(20)
     }
 
+    /**
+     * Finds complete track tags from MusicBrainz. Digital releases are searched first;
+     * physical releases are used only when no matching digital release is found.
+     */
+    suspend fun searchTags(artist: String, title: String, album: String): List<TagCandidate> =
+        withContext(Dispatchers.IO) {
+            if (title.isBlank()) return@withContext emptyList()
+
+            fun norm(value: String) = value.lowercase().filter { it.isLetterOrDigit() }
+
+            suspend fun findPass(digitalOnly: Boolean): List<TagCandidate> {
+                val releaseIds = linkedSetOf<String>()
+                if (album.isNotBlank()) {
+                    val format = if (digitalOnly) " AND format:\"Digital Media\"" else ""
+                    val artistPart = if (artist.isBlank()) "" else " AND artist:\"${esc(artist)}\""
+                    val q = "release:\"${esc(album)}\"$artistPart$format"
+                    runCatching {
+                        val releases = JSONObject(
+                            text("https://musicbrainz.org/ws/2/release/?query=${enc(q)}&fmt=json&limit=10")
+                        ).optJSONArray("releases") ?: return@runCatching
+                        for (i in 0 until releases.length()) {
+                            releases.optJSONObject(i)?.optString("id")?.takeIf { it.isNotBlank() }?.let(releaseIds::add)
+                        }
+                    }
+                }
+
+                // If the album tag is missing or the album search didn't return anything,
+                // resolve the recording and inspect its releases.
+                if (releaseIds.isEmpty()) {
+                    val artistPart = if (artist.isBlank()) "" else " AND artist:\"${esc(artist)}\""
+                    val q = "recording:\"${esc(title)}\"$artistPart"
+                    runCatching {
+                        val recordings = JSONObject(
+                            text("https://musicbrainz.org/ws/2/recording/?query=${enc(q)}&fmt=json&limit=8")
+                        ).optJSONArray("recordings") ?: return@runCatching
+                        for (i in 0 until recordings.length()) {
+                            val rec = recordings.optJSONObject(i) ?: continue
+                            if (norm(rec.optString("title")) != norm(title)) continue
+                            val releases = rec.optJSONArray("releases") ?: continue
+                            for (j in 0 until releases.length()) {
+                                val rel = releases.optJSONObject(j) ?: continue
+                                val releaseTitle = rel.optString("title")
+                                if (album.isNotBlank() && norm(releaseTitle) != norm(album)) continue
+                                rel.optString("id").takeIf { it.isNotBlank() }?.let(releaseIds::add)
+                                if (releaseIds.size >= 10) break
+                            }
+                            if (releaseIds.size >= 10) break
+                        }
+                    }
+                }
+
+                val matches = mutableListOf<TagCandidate>()
+                for (releaseId in releaseIds.take(10)) {
+                    val release = runCatching {
+                        JSONObject(text("https://musicbrainz.org/ws/2/release/$releaseId?inc=recordings+artist-credits&fmt=json"))
+                    }.getOrNull() ?: continue
+
+                    val media = release.optJSONArray("media") ?: continue
+                    val digitalRelease = (0 until media.length()).any { i ->
+                        media.optJSONObject(i)?.optString("format").orEmpty().contains("digital", ignoreCase = true)
+                    }
+                    if (digitalOnly && !digitalRelease) continue
+
+                    val releaseTitle = release.optString("title").ifBlank { album }
+                    if (album.isNotBlank() && norm(releaseTitle) != norm(album)) continue
+                    val year = release.optString("date").take(4)
+                    val releaseArtist = buildString {
+                        val credits = release.optJSONArray("artist-credit")
+                        if (credits != null) {
+                            for (i in 0 until credits.length()) {
+                                val part = credits.optJSONObject(i) ?: continue
+                                append(part.optString("name"))
+                                append(part.optString("joinphrase"))
+                            }
+                        }
+                    }.trim().ifBlank { artist }
+
+                    for (m in 0 until media.length()) {
+                        val medium = media.optJSONObject(m) ?: continue
+                        val tracks = medium.optJSONArray("tracks") ?: continue
+                        for (i in 0 until tracks.length()) {
+                            val track = tracks.optJSONObject(i) ?: continue
+                            val recording = track.optJSONObject("recording")
+                            val trackTitle = track.optString("title").ifBlank { recording?.optString("title").orEmpty() }
+                            if (norm(trackTitle) != norm(title)) continue
+                            val trackArtist = buildString {
+                                val credits = track.optJSONArray("artist-credit") ?: recording?.optJSONArray("artist-credit")
+                                if (credits != null) for (j in 0 until credits.length()) {
+                                    val part = credits.optJSONObject(j) ?: continue
+                                    append(part.optString("name"))
+                                    append(part.optString("joinphrase"))
+                                }
+                            }.trim().ifBlank { releaseArtist }
+                            val trackNumber = track.optString("number").ifBlank { track.optString("position") }
+                            val discNumber = medium.optString("position").ifBlank { (m + 1).toString() }
+                            val completeTags = Tags(
+                                title = trackTitle,
+                                artist = trackArtist,
+                                album = releaseTitle,
+                                albumArtist = releaseArtist,
+                                year = year,
+                                track = trackNumber,
+                                disc = discNumber,
+                            )
+                            val releaseKind = if (digitalRelease) "digital" else "physical/other"
+                            val label = "[$releaseKind] $releaseArtist — $releaseTitle" +
+                                (if (year.isNotBlank()) " ($year)" else "") +
+                                (if (trackNumber.isNotBlank()) " · track $trackNumber" else "")
+                            matches += TagCandidate(label, completeTags, digitalRelease)
+                        }
+                    }
+                }
+                return matches.distinctBy { listOf(it.tags.artist, it.tags.album, it.tags.title, it.tags.year, it.tags.track).joinToString("|") }
+            }
+
+            val digital = runCatching { findPass(digitalOnly = true) }.getOrDefault(emptyList())
+            if (digital.isNotEmpty()) digital
+            else runCatching { findPass(digitalOnly = false) }.getOrDefault(emptyList()).take(20)
+        }
+
     private fun parseLyrics(o: JSONObject): Lyrics {
         fun s(k: String): String? = if (o.isNull(k)) null else o.optString(k).ifBlank { null }
         return Lyrics(synced = s("syncedLyrics"), plain = s("plainLyrics"))
