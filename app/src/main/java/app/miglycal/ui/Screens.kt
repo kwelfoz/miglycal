@@ -353,10 +353,8 @@ fun AddToPlaylistDialog(vm: AppViewModel, tracks: List<Track>, onDone: () -> Uni
 @Composable
 fun SettingsScreen(vm: AppViewModel) {
     val p = LocalPal.current
-    val ctx = LocalContext.current
     val accent by vm.accent.collectAsState()
     val blocked by vm.blocked.collectAsState()
-    val lastFmApiKey by vm.lastFmApiKey.collectAsState()
 
     Column(Modifier.fillMaxSize()) {
         Prompt("definições")
@@ -372,6 +370,8 @@ fun SettingsScreen(vm: AppViewModel) {
                 }
             }
 
+            MusicFoldersPicker(vm)
+
             Section("pastas bloqueadas")
             if (blocked.isEmpty()) {
                 Txt("nenhuma. bloqueia pastas na biblioteca.", color = p.dim, size = 11.sp)
@@ -384,9 +384,6 @@ fun SettingsScreen(vm: AppViewModel) {
                 Rule()
             }
 
-            Section("Last.fm")
-            Txt("Chave da API para carregar foto e biografia dos artistas. Podes obter uma chave de aplicação no site Last.fm.", color = p.dim, size = 11.sp)
-            TermField("API key", lastFmApiKey, { vm.setLastFmApiKey(it) })
             Section("sobre")
             Txt("miglycal v1.0", color = p.dim)
             Txt("flac // mp3", color = p.dim, size = 11.sp)
