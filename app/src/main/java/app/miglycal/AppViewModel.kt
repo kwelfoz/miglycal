@@ -28,6 +28,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val all = MutableStateFlow<List<Track>>(emptyList())
     val blocked = MutableStateFlow(store.blocked)
     val accent = MutableStateFlow(Accent.from(store.accent))
+    val lastFmApiKey = MutableStateFlow(store.lastFmApiKey)
     val playlists = MutableStateFlow(store.loadPlaylists())
     val loading = MutableStateFlow(false)
 
@@ -52,6 +53,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ------------------------------------------------------------ definições
+
+    fun setLastFmApiKey(key: String) {
+        store.lastFmApiKey = key
+        lastFmApiKey.value = key.trim()
+    }
 
     fun setAccent(a: Accent) {
         store.accent = a.key
