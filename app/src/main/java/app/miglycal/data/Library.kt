@@ -2,6 +2,8 @@ package app.miglycal.data
 
 import android.content.ContentUris
 import android.content.Context
+import android.net.Uri
+import android.provider.DocumentsContract
 import android.provider.MediaStore
 import java.io.File
 
@@ -47,6 +49,21 @@ object Library {
         }
         return out.sortedBy { it.path.lowercase() }
     }
+
+    /** Converts a folder chosen with Android's system picker into its MediaStore path. */
+    fun pathFromTreeUri(uri: Uri): String? = runCatching {
+        val documentId = DocumentsContract.getTreeDocumentId(uri)
+        val split = documentId.indexOf(':')
+        if (split < 0) return@runCatching null
+        val volume = documentId.substring(0, split)
+        val relative = documentId.substring(split + 1).trim('/')
+        val root = if (volume.equals("primary", ignoreCase = true)) {
+            "/storage/emulated/0"
+        } else {
+            "/storage/$volume"
+        }
+        if (relative.isBlank()) root else "$root/$relative"
+    }.getOrNull()
 
     fun shortPath(folder: String): String =
         folder.removePrefix("/storage/emulated/0/").removePrefix("/storage/emulated/0")
