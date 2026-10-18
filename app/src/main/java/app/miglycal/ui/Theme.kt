@@ -40,9 +40,10 @@ class Pal(val accent: Color) {
 }
 
 val LocalPal = staticCompositionLocalOf { Pal(Accent.GREEN.color) }
+val LocalLanguage = staticCompositionLocalOf { "pt" }
 
 @Composable
-fun MiglycalTheme(accent: Accent, content: @Composable () -> Unit) {
+fun MiglycalTheme(accent: Accent, language: String, content: @Composable () -> Unit) {
     val pal = remember(accent) { Pal(accent.color) }
     val scheme = darkColorScheme(
         primary = pal.accent,
@@ -71,7 +72,7 @@ fun MiglycalTheme(accent: Accent, content: @Composable () -> Unit) {
         large = RoundedCornerShape(0.dp),
         extraLarge = RoundedCornerShape(0.dp),
     )
-    CompositionLocalProvider(LocalPal provides pal) {
+    CompositionLocalProvider(LocalPal provides pal, LocalLanguage provides language) {
         MaterialTheme(colorScheme = scheme, shapes = sharp, content = content)
     }
 }
