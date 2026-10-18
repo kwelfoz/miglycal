@@ -199,7 +199,7 @@ object Online {
                 val matches = mutableListOf<TagCandidate>()
                 for (releaseId in releaseIds.take(10)) {
                     val release = runCatching {
-                        JSONObject(text("https://musicbrainz.org/ws/2/release/$releaseId?inc=recordings+artist-credits&fmt=json"))
+                        JSONObject(text("https://musicbrainz.org/ws/2/release/$releaseId?inc=recordings+artist-credits+genres&fmt=json"))
                     }.getOrNull() ?: continue
 
                     val media = release.optJSONArray("media") ?: continue
@@ -240,6 +240,13 @@ object Online {
                             }.trim().ifBlank { releaseArtist }
                             val trackNumber = track.optString("number").ifBlank { track.optString("position") }
                             val discNumber = medium.optString("position").ifBlank { (m + 1).toString() }
+                            val genreArray = recording?.optJSONArray("genres") ?: release.optJSONArray("genres")
+                            val genres = genreArray?.let { genreList ->
+                                (0 until genreList.length()).mapNotNull { genreList.optJSONObject(it)?.optString("name") }
+                                    .filter { it.isNotBlank() }
+                                    .distinct()
+                                    .joinToString("; ")
+                            }.orEmpty()
                             val completeTags = Tags(
                                 title = trackTitle,
                                 artist = trackArtist,
@@ -248,6 +255,7 @@ object Online {
                                 year = year,
                                 track = trackNumber,
                                 disc = discNumber,
+                                genre = genres,
                             )
                             val releaseKind = if (digitalRelease) "digital" else "physical/other"
                             val label = "[$releaseKind] $releaseArtist — $releaseTitle" +
