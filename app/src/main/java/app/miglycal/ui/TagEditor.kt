@@ -45,6 +45,7 @@ import app.miglycal.data.Art
 import app.miglycal.data.CoverCandidate
 import app.miglycal.data.Lyrics
 import app.miglycal.data.LyricsCandidate
+import app.miglycal.data.TagCandidate
 import app.miglycal.data.LyricsStore
 import app.miglycal.data.Online
 import app.miglycal.data.TagIO
@@ -79,6 +80,7 @@ fun TagEditorScreen(vm: AppViewModel, track: Track, back: () -> Unit) {
     // capas
     var candidates by remember { mutableStateOf<List<CoverCandidate>>(emptyList()) }
     var manualCoverSearch by remember { mutableStateOf(false) }
+    var tagCandidates by remember { mutableStateOf<List<TagCandidate>>(emptyList()) }
     var coverSearchArtist by remember(track.path) { mutableStateOf(fallback.artist) }
     var coverSearchAlbum by remember(track.path) { mutableStateOf(fallback.album.ifBlank { fallback.title }) }
     var cover by remember { mutableStateOf<ByteArray?>(null) }
@@ -93,6 +95,25 @@ fun TagEditorScreen(vm: AppViewModel, track: Track, back: () -> Unit) {
     var lyricCandidates by remember { mutableStateOf<List<LyricsCandidate>>(emptyList()) }
 
     fun say(s: String) { log.add(s) }
+
+    // System picker grants access only to the chosen image; no storage permission is requested.
+    val localCoverPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            scope.launch {
+                busy = true
+                val bytes = withContext(Dispatchers.IO) {
+                    runCatching { ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() } }.getOrNull()
+                }
+                if (bytes != null && bytes.isNotEmpty()) {
+                    cover = bytes
+                    say("> imagem local selecionada (${bytes.size / 1024} kB). guarda para aplicar.")
+                } else {
+                    say("! não foi possível ler a imagem selecionada.")
+                }
+                busy = false
+            }
+        }
+    }
 
     fun doSave() {
         scope.launch {
@@ -150,6 +171,41 @@ fun TagEditorScreen(vm: AppViewModel, track: Track, back: () -> Unit) {
             TermField("género", tags.genre, { tags = tags.copy(genre = it) })
             TermField("comentário", tags.comment, { tags = tags.copy(comment = it) }, singleLine = false)
 
+            // ------------------------------------------------------- tags online
+            Section("tags online")
+            Txt("Pesquisa etiquetas completas através do MusicBrainz. As versões digitais são preferidas; os restantes lançamentos só aparecem se não houver correspondências digitais.", color = p.dim, size = 11.sp)
+            Btn("procurar tags completas", {
+                scope.launch {
+                    busy = true
+                    say("> a procurar tags: ${tags.artist} - ${tags.title} (${tags.album})")
+                    tagCandidates = runCatching { Online.searchTags(tags.artist, tags.title, tags.album) }
+                        .onFailure { say("! pesquisa de tags falhou: ${it.message}") }
+                        .getOrDefault(emptyList())
+                    say("> ${tagCandidates.size} correspondência(s) de tags.")
+                    busy = false
+                }
+            }, enabled = !busy && tags.title.isNotBlank(), active = true)
+            tagCandidates.forEach { candidate ->
+                Row(
+                    Modifier.fillMaxWidth().clickable {
+                        tags = candidate.tags
+                        say("> tags selecionadas: ${candidate.label}. confirma e guarda.")
+                    }.padding(vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Txt(candidate.label, size = 11.sp, maxLines = 3)
+                        Txt(
+                            listOf(candidate.tags.artist, candidate.tags.album, candidate.tags.year)
+                                .filter { it.isNotBlank() }.joinToString(" · "),
+                            color = p.dim, size = 10.sp, maxLines = 2,
+                        )
+                    }
+                    Btn("usar", { tags = candidate.tags; say("> tags selecionadas. confirma e guarda.") }, active = true, size = 10.sp)
+                }
+                Rule()
+            }
+
             // ------------------------------------------------------------ capa
             Section("capa")
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -168,6 +224,7 @@ fun TagEditorScreen(vm: AppViewModel, track: Track, back: () -> Unit) {
                     }
                 }
             }
+            Btn("escolher ficheiro local", { localCoverPicker.launch("image/*") }, enabled = !busy)
             Btn("procurar capa online", {
                 scope.launch {
                     busy = true
