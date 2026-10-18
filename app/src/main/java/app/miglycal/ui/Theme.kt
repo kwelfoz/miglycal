@@ -1,5 +1,6 @@
 package app.miglycal.ui
 
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
@@ -9,8 +10,8 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.unit.dp
 
 /** Paletas selecionáveis nas definições. */
 enum class Accent(val key: String, val label: String, val color: Color) {
@@ -62,12 +63,13 @@ fun MiglycalTheme(accent: Accent, content: @Composable () -> Unit) {
         surfaceContainerHigh = pal.surfaceHi,
         surfaceContainerHighest = pal.surfaceHi,
     )
+    // Raio zero mantém o aspeto quadrado/terminal, usando o tipo esperado por Material3.
     val sharp = Shapes(
-        extraSmall = RectangleShape,
-        small = RectangleShape,
-        medium = RectangleShape,
-        large = RectangleShape,
-        extraLarge = RectangleShape,
+        extraSmall = RoundedCornerShape(0.dp),
+        small = RoundedCornerShape(0.dp),
+        medium = RoundedCornerShape(0.dp),
+        large = RoundedCornerShape(0.dp),
+        extraLarge = RoundedCornerShape(0.dp),
     )
     CompositionLocalProvider(LocalPal provides pal) {
         MaterialTheme(colorScheme = scheme, shapes = sharp, content = content)
