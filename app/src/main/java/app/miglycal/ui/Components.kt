@@ -239,6 +239,7 @@ fun TrackRow(
     selectMode: Boolean = false,
     selected: Boolean = false,
     menu: List<Pair<String, () -> Unit>> = emptyList(),
+    onArtistClick: ((String) -> Unit)? = null,
 ) {
     val p = LocalPal.current
     var open by remember { mutableStateOf(false) }
@@ -258,7 +259,20 @@ fun TrackRow(
         Txt(prefix, color = if (playing || selected) p.accent else p.dim, modifier = Modifier.width(34.dp), maxLines = 1)
         Column(Modifier.weight(1f).padding(vertical = 8.dp)) {
             Txt(track.title, color = if (playing) p.accent else p.text, bold = playing, maxLines = 1)
-            Txt("${track.artist} · ${track.album}", color = p.dim, size = 11.sp, maxLines = 1)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                val artists = app.miglycal.data.ArtistNames.split(track.artist)
+                artists.forEachIndexed { index, artist ->
+                    if (index > 0) Txt(", ", color = p.dim, size = 11.sp)
+                    Txt(
+                        artist,
+                        color = if (onArtistClick != null) p.accent else p.dim,
+                        size = 11.sp,
+                        maxLines = 1,
+                        modifier = if (onArtistClick != null) Modifier.clickable { onArtistClick(artist) } else Modifier,
+                    )
+                }
+                Txt(" · ${track.album}", color = p.dim, size = 11.sp, maxLines = 1)
+            }
         }
         Txt(fmt(track.durationMs), color = p.dim, size = 11.sp, modifier = Modifier.padding(horizontal = 6.dp))
         if (menu.isNotEmpty()) {
