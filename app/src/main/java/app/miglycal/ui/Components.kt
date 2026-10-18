@@ -56,7 +56,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.miglycal.data.Art
 import app.miglycal.data.Track
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 fun fmt(ms: Long): String {
     val s = (ms / 1000).coerceAtLeast(0)
@@ -298,7 +300,7 @@ fun TrackRow(
 fun CoverImage(path: String?, modifier: Modifier = Modifier, version: Int = 0) {
     val p = LocalPal.current
     val bmp by produceState<android.graphics.Bitmap?>(null, path, version) {
-        value = if (path == null) null else Art.load(path)
+        value = if (path == null) null else withContext(Dispatchers.IO) { Art.load(path) }
     }
     Box(modifier.background(p.surface).border(1.dp, p.line), contentAlignment = Alignment.Center) {
         val b = bmp
