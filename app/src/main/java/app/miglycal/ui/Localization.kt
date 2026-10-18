@@ -127,11 +127,11 @@ fun localizeText(raw: String, language: String): String {
         "laranja" to "orange",
         "vermelho" to "red",
         "sem playlists. cria uma aqui, ou escolhe faixas numa pasta (selecionar > +playlist)." to "no playlists yet. Create one here, or select tracks in a folder (select > +playlist).",
-        "no results. Try another title or artist." to "sem resultados. Experimenta outro título ou artista.",
-        "not found." to "não encontrada.",
-        "found: synced and plain." to "encontrada: sincronizada e normal.",
-        "found: synced." to "encontrada: sincronizada.",
-        "found: plain." to "encontrada: normal.",
+        "sem resultados. Experimenta outro título ou artista." to "no results. Try another title or artist.",
+        "não encontrada." to "not found.",
+        "encontrada: sincronizada e normal." to "found: synced and plain.",
+        "encontrada: sincronizada." to "found: synced.",
+        "encontrada: normal." to "found: plain.",
         "toca num para escolher." to "tap one to choose.",
         "imagem local selecionada" to "local image selected",
         "não foi possível ler a imagem selecionada." to "could not read the selected image.",
@@ -180,6 +180,12 @@ fun localizeText(raw: String, language: String): String {
             .replace("não foi possível ler a imagem selecionada.", "could not read the selected image.")
             .replace("permissão recusada, nada foi guardado.", "permission denied; nothing was saved.")
             .replace("erro ao guardar:", "save error:")
+            .replace("imagem local selecionada", "local image selected")
+            .replace("não encontrada.", "not found.")
+            .replace("encontrada: sincronizada e normal.", "found: synced and plain.")
+            .replace("encontrada: sincronizada.", "found: synced.")
+            .replace("encontrada: normal.", "found: plain.")
+            .replace("toca num para escolher.", "tap one to choose.")
             .replace("as faixas desta pasta (e subpastas) deixam de aparecer na biblioteca. podes desbloquear nas definições.", "tracks in this folder (and subfolders) will no longer appear in the library. You can unblock them in Settings.")
             .replace("as faixas desta pasta deixam de aparecer na biblioteca.", "tracks in this folder will no longer appear in the library.")
     } else {
@@ -209,6 +215,12 @@ fun localizeText(raw: String, language: String): String {
             .replace("could not read the selected image.", "não foi possível ler a imagem selecionada.")
             .replace("permission denied; nothing was saved.", "permissão recusada, nada foi guardado.")
             .replace("save error:", "erro ao guardar:")
+            .replace("local image selected", "imagem local selecionada")
+            .replace("not found.", "não encontrada.")
+            .replace("found: synced and plain.", "encontrada: sincronizada e normal.")
+            .replace("found: synced.", "encontrada: sincronizada.")
+            .replace("found: plain.", "encontrada: normal.")
+            .replace("tap one to choose.", "toca num para escolher.")
             .replace("tracks in this folder (and subfolders) will no longer appear in the library. You can unblock them in Settings.", "as faixas desta pasta (e subpastas) deixam de aparecer na biblioteca. podes desbloquear nas definições.")
             .replace("tracks in this folder will no longer appear in the library.", "as faixas desta pasta deixam de aparecer na biblioteca.")
     }
