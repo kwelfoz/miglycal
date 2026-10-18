@@ -70,7 +70,7 @@ fun ArtistScreen(name: String, vm: AppViewModel, back: () -> Unit) {
                     modifier = Modifier.fillMaxWidth().height(190.dp).background(p.surface),
                     contentScale = ContentScale.Crop,
                 ) {
-                    when (state) {
+                    when (painter.state) {
                         is AsyncImagePainter.State.Success -> SubcomposeAsyncImageContent()
                         is AsyncImagePainter.State.Error -> Box(
                             Modifier.fillMaxSize().background(p.surface),
