@@ -62,9 +62,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun addMusicFolder(path: String) {
         val normalized = path.trimEnd('/').ifBlank { "/" }
-        val next = musicFolders.value + normalized
+        if (musicFolders.value.any { existing ->
+                normalized == existing || normalized.startsWith("${existing.trimEnd('/')}/")
+            }) return
+        val next = (musicFolders.value.filterNot { existing ->
+            existing.startsWith("$normalized/")
+        } + normalized).toSet()
         store.musicFolders = next
         musicFolders.value = next
+        refresh()
     }
 
     fun removeMusicFolder(path: String) {
