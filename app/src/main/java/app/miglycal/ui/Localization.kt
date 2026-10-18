@@ -89,18 +89,17 @@ fun localizeText(raw: String, language: String): String {
         "ao guardar: grava a letra sincronizada (formato LRC) no campo de letra do ficheiro." to "when saving: writes synced lyrics (LRC format) to the file's lyrics field.",
         "ao guardar: grava a letra normal no campo de letra do ficheiro." to "when saving: writes plain lyrics to the file's lyrics field.",
         "log" to "log",
-        "pause" to "pausa",
+        "pausa" to "pause",
         "a tocar" to "now playing",
         "shuf" to "shuffle",
         "sem capa" to "no cover",
-        "about" to "sobre",
-        "show less" to "mostrar menos",
-        "read more" to "ler mais",
-        "in your library" to "na tua biblioteca",
+        "mostrar menos" to "show less",
+        "ler mais" to "read more",
+        "na tua biblioteca" to "in your library",
         "álbum desconhecido" to "unknown album",
-        "loading artist information..." to "a carregar informações do artista...",
-        "no biography available." to "sem biografia disponível.",
-        "no music by this artist was found in your selected folders." to "não foram encontradas músicas deste artista nas pastas selecionadas.",
+        "a carregar informações do artista..." to "loading artist information...",
+        "sem biografia disponível." to "no biography available.",
+        "não foram encontradas músicas deste artista nas pastas selecionadas." to "no music by this artist was found in your selected folders.",
         "Começar agora" to "Get started",
         "Um leitor de música para a tua coleção local." to "A music player for your local collection.",
         "Configuração inicial" to "Initial setup",
@@ -111,22 +110,37 @@ fun localizeText(raw: String, language: String): String {
         "Apenas as músicas destas pastas aparecem na biblioteca. Podes alterar isto mais tarde nas definições." to "Only music in these folders appears in your library. You can change this later in Settings.",
         "Começar a usar o Miglycal" to "Start using Miglycal",
         "Escolhe pelo menos uma pasta de música para continuar." to "Choose at least one music folder to continue.",
-        "Set up your music library" to "Configura a tua biblioteca de música",
-        "Choose the folders where your music is stored and pick an accent colour. You can change these later in Settings." to "Escolhe as pastas onde guardas música e uma cor de destaque. Podes alterar isto mais tarde nas definições.",
-        "accent colour" to "cor de destaque",
-        "start using miglycal" to "começar a usar o Miglycal",
-        "choose at least one music folder to continue." to "escolhe pelo menos uma pasta de música para continuar.",
-        "This folder location is not supported. Choose a folder in shared internal storage or an SD card." to "Esta localização não é suportada. Escolhe uma pasta no armazenamento interno partilhado ou num cartão SD.",
-        "music folders" to "pastas de música",
-        "Only audio files inside these folders will appear in your library. Android opens its own folder picker; no broad storage permission is needed for selecting a folder." to "Só aparecem na biblioteca os ficheiros de áudio destas pastas. O Android abre o seletor de pastas do sistema; não é necessária uma permissão geral de armazenamento para escolher uma pasta.",
-        "add folder" to "adicionar pasta",
-        "no folders selected." to "nenhuma pasta selecionada.",
-        "remove" to "remover",
-        "Keep at least one folder selected." to "Mantém pelo menos uma pasta selecionada.",
+        "Configura a tua biblioteca de música" to "Set up your music library",
+        "Escolhe as pastas onde guardas música e uma cor de destaque. Podes alterar isto mais tarde nas definições." to "Choose the folders where your music is stored and pick an accent colour. You can change these later in Settings.",
+        "cor de destaque" to "accent colour",
+        "começar a usar o Miglycal" to "start using miglycal",
+        "escolhe pelo menos uma pasta de música para continuar." to "choose at least one music folder to continue.",
+        "Esta localização não é suportada. Escolhe uma pasta no armazenamento interno partilhado ou num cartão SD." to "This folder location is not supported. Choose a folder in shared internal storage or an SD card.",
+        "pastas de música" to "music folders",
+        "Só aparecem na biblioteca os ficheiros de áudio destas pastas. O Android abre o seletor de pastas do sistema; não é necessária uma permissão geral de armazenamento para escolher uma pasta." to "Only audio files inside these folders will appear in your library. Android opens its own folder picker; no broad storage permission is needed for selecting a folder.",
+        "adicionar pasta" to "add folder",
+        "nenhuma pasta selecionada." to "no folders selected.",
+        "remover" to "remove",
+        "Mantém pelo menos uma pasta selecionada." to "Keep at least one folder selected.",
         "verde" to "green",
         "amarelo" to "yellow",
         "laranja" to "orange",
-        "vermelho" to "red"
+        "vermelho" to "red",
+        "sem playlists. cria uma aqui, ou escolhe faixas numa pasta (selecionar > +playlist)." to "no playlists yet. Create one here, or select tracks in a folder (select > +playlist).",
+        "no results. Try another title or artist." to "sem resultados. Experimenta outro título ou artista.",
+        "not found." to "não encontrada.",
+        "found: synced and plain." to "encontrada: sincronizada e normal.",
+        "found: synced." to "encontrada: sincronizada.",
+        "found: plain." to "encontrada: normal.",
+        "toca num para escolher." to "tap one to choose.",
+        "imagem local selecionada" to "local image selected",
+        "não foi possível ler a imagem selecionada." to "could not read the selected image.",
+        "falhou:" to "failed:",
+        "erro ao guardar:" to "save error:",
+        "guardado." to "saved.",
+        "a guardar..." to "saving...",
+        "letra não encontrada." to "lyrics not found.",
+        "sem letra. abre [tags] para procurar online." to "no lyrics. Open [tags] to search online."
     )
 
     val translated = if (english) {
@@ -142,6 +156,7 @@ fun localizeText(raw: String, language: String): String {
             .replace(Regex("^(\\d+) faixas$"), "$1 tracks")
             .replace(Regex("^(\\d+) track\\(s\\) · (\\d+) album\\(s\\)$"), "$1 tracks · $2 albums")
             .replace(Regex("^(\\d+) track\\(s\\)$"), "$1 tracks")
+            .replace(Regex("^(\\d+) faixas · aleat:(.+) · rep:(.+)$"), "$1 tracks · shuffle:$2 · repeat:$3")
             .replace(Regex("^adicionar (\\d+) faixa\\(s\\)$"), "add $1 track(s)")
             .replace(Regex("^(\\d+) correspondência\\(s\\) de tags\\.$"), "$1 tag match(es).")
             .replace(Regex("^(\\d+) resultado\\(s\\)\\."), "$1 result(s).")
@@ -174,6 +189,7 @@ fun localizeText(raw: String, language: String): String {
             .replace(Regex("^(\\d+) albums$"), "$1 álbuns")
             .replace(Regex("^(\\d+) track\\(s\\) · (\\d+) album\\(s\\)$"), "$1 faixas · $2 álbuns")
             .replace(Regex("^(\\d+) track\\(s\\)$"), "$1 faixas")
+            .replace(Regex("^(\\d+) tracks · shuffle:(.+) · repeat:(.+)$"), "$1 faixas · aleat:$2 · rep:$3")
             .replace(Regex("^add (\\d+) track\\(s\\)$"), "adicionar $1 faixa(s)")
             .replace(Regex("^\\(missing\\) (.+)$"), "(em falta) $1")
             .replace("shuffle:", "aleat:")
