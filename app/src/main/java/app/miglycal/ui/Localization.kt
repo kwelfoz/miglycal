@@ -96,6 +96,8 @@ fun localizeText(raw: String, language: String): String {
         "mostrar menos" to "show less",
         "ler mais" to "read more",
         "na tua biblioteca" to "in your library",
+        "fotografia indisponível" to "photo unavailable",
+        "a carregar fotografia..." to "loading photo...",
         "álbum desconhecido" to "unknown album",
         "a carregar informações do artista..." to "loading artist information...",
         "sem biografia disponível." to "no biography available.",
