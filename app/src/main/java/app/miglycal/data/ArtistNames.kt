@@ -17,11 +17,15 @@ object ArtistNames {
             .map { it.trim() }
             .filter { it.isNotBlank() }
 
-        // Remove parênteses usados apenas para envolver "feat. Artista":
-        // "A1 (feat. A2)" -> ["A1", "A2"].
-        return parts.map { part ->
-            part.trim().trim('(', ')', '[', ']', '{', '}').trim()
-        }.filter { it.isNotBlank() }
+        // Só remove parênteses de limite quando a etiqueta foi dividida.
+        // Assim, nomes individuais como "Artista (Live)" ficam intactos.
+        val cleaned = if (parts.size > 1) {
+            parts.map { it.trim().trim('(', ')', '[', ']', '{', '}').trim() }
+        } else {
+            parts
+        }
+
+        return cleaned.filter { it.isNotBlank() }
             .distinctBy { it.lowercase() }
     }
 }
