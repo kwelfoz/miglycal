@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -252,6 +253,8 @@ fun AlbumTagEditorScreen(
             status = "! seleciona pelo menos um campo para aplicar."
             return
         }
+        val tagValues = values
+        val fieldsToApply = selectedFields
         scope.launch {
             busy = true
             status = "> a guardar etiquetas em ${tracks.size} faixa(s)..."
@@ -259,9 +262,9 @@ fun AlbumTagEditorScreen(
                 tracks.map { track ->
                     track.path to runCatching {
                         if (Build.VERSION.SDK_INT >= 30) {
-                            TagIO.writeAlbumViaUri(context, Uri.parse(track.uri), values, selectedFields)
+                            TagIO.writeAlbumViaUri(context, Uri.parse(track.uri), tagValues, fieldsToApply)
                         } else {
-                            TagIO.writeAlbum(context, track.path, values, selectedFields)
+                            TagIO.writeAlbum(context, track.path, tagValues, fieldsToApply)
                         }
                     }
                 }
