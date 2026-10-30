@@ -113,7 +113,7 @@ object AlbumOnline {
             imageUrl = image,
             releasedAt = source.optString("releasedate").trim().takeIf { it.isNotBlank() },
             genres = genres,
-            description = cleanHtml(wiki?.optString("content")?.ifBlank { wiki.optString("summary") }),
+            description = cleanHtml(wiki?.optString("content")?.takeIf { it.isNotBlank() } ?: wiki?.optString("summary")),
             tracks = tracks,
             url = source.optString("url").takeIf { it.startsWith("http") },
         )
