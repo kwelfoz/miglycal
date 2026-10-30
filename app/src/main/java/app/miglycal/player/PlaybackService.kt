@@ -4,15 +4,25 @@ import android.content.Intent
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import androidx.media3.common.util.UnstableApi
+import app.miglycal.R
 
 /** Serviço de reprodução em segundo plano (notificação + controlos no ecrã de bloqueio). */
 class PlaybackService : MediaSessionService() {
     private var session: MediaSession? = null
 
+    @OptIn(UnstableApi::class)
     override fun onCreate() {
         super.onCreate()
+
+        // Use a purpose-built monochrome symbol instead of the generic Android media icon.
+        val notificationProvider = DefaultMediaNotificationProvider(this).apply {
+            setSmallIcon(R.drawable.ic_stat_miglycal)
+        }
+        setMediaNotificationProvider(notificationProvider)
         val player = ExoPlayer.Builder(this)
             .setAudioAttributes(
                 AudioAttributes.Builder()
