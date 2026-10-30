@@ -40,6 +40,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.miglycal.AppViewModel
 import app.miglycal.BuildConfig
+import app.miglycal.data.FuzzySearch
 import app.miglycal.data.Library
 import app.miglycal.data.Rep
 import app.miglycal.data.Track
@@ -142,7 +143,7 @@ fun LibraryScreen(
                         label = "",
                         track = t,
                         playing = st.path == t.path,
-                        onClick = { vm.playTracks(sorted, i) },
+                        onClick = { vm.playTracks(visibleTracks, i) },
                         menu = listOf(
                             "adicionar à playlist" to { addToPlaylist(listOf(t)) },
                             "editar etiquetas" to { openTags(t) },
@@ -192,8 +193,8 @@ fun FolderScreen(
         Prompt(Library.shortPath(folder)) { Btn("voltar", back) }
         Flow(Modifier.padding(horizontal = 10.dp)) {
             if (!selecting) {
-                Btn("tocar", { vm.playTracks(list, 0) }, enabled = list.isNotEmpty())
-                Btn("aleat.", { vm.playShuffled(list) }, enabled = list.isNotEmpty())
+                Btn("tocar", { vm.playTracks(visibleList, 0) }, enabled = visibleList.isNotEmpty())
+                Btn("aleat.", { vm.playShuffled(visibleList) }, enabled = visibleList.isNotEmpty())
                 Btn("selecionar", { selecting = true; sel = emptySet() })
             } else {
                 val allSelected = visibleList.isNotEmpty() && visibleList.all { it.path in sel }
@@ -321,7 +322,7 @@ fun PlaylistScreen(
     val visiblePaths = remember(pl.paths, byPath, search) {
         pl.paths.filter { path ->
             val track = byPath[path]
-            track != null && FuzzySearch.matches(search, track.title, track.artist, track.album)
+            search.isBlank() || (track != null && FuzzySearch.matches(search, track.title, track.artist, track.album))
         }
     }
 
