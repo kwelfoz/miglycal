@@ -9,7 +9,7 @@ object FuzzySearch {
         val decomposed = Normalizer.normalize(value.lowercase(Locale.ROOT), Normalizer.Form.NFD)
         return decomposed
             .replace(Regex("\\p{Mn}+"), "")
-            .replace(Regex("[^a-z0-9]+"), " ")
+            .replace(Regex("[^\\p{L}\\p{N}]+"), " ")
             .trim()
     }
 
