@@ -22,6 +22,11 @@ fun localizeText(raw: String, language: String): String {
 
     val pairs = listOf(
         "pesquisa" to "search",
+        "✓ álbum" to "✓ album",
+        "✓ artista álb." to "✓ album artist",
+        "✓ ano" to "✓ year",
+        "✓ género" to "✓ genre",
+        "✓ comentário" to "✓ comment",
         "álbum" to "album",
         "álbuns" to "albums",
         "editar etiquetas do álbum" to "edit album tags",
