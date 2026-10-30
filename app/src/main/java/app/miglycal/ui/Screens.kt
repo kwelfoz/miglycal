@@ -73,15 +73,26 @@ fun LibraryScreen(
     openTags: (Track) -> Unit,
     addToPlaylist: (List<Track>) -> Unit,
     openArtist: (String) -> Unit = {},
+    openAlbum: (Track) -> Unit = {},
 ) {
     val p = LocalPal.current
     val tracks by vm.tracks.collectAsState()
     val loading by vm.loading.collectAsState()
     val st by vm.player.state.collectAsState()
     var view by rememberSaveable { mutableStateOf("pastas") }
+    var search by rememberSaveable { mutableStateOf("") }
     var blockAsk by remember { mutableStateOf<String?>(null) }
     val folders = remember(tracks) { tracks.groupBy { it.folder }.entries.sortedBy { it.key.lowercase() } }
+    val visibleFolders = remember(folders, search) {
+        folders.filter { entry ->
+            search.isBlank() || FuzzySearch.matches(search, entry.key) ||
+                entry.value.any { FuzzySearch.matches(search, it.title, it.artist, it.album) }
+        }
+    }
     val sorted = remember(tracks) { tracks.sortedBy { it.title.lowercase() } }
+    val visibleTracks = remember(sorted, search) {
+        sorted.filter { FuzzySearch.matches(search, it.title, it.artist, it.album) }
+    }
 
     Column(Modifier.fillMaxSize()) {
         Prompt("biblioteca") { Btn(if (loading) "..." else "rescan", { vm.refresh() }) }
@@ -94,6 +105,7 @@ fun LibraryScreen(
                 color = p.dim, size = 11.sp, modifier = Modifier.padding(end = 6.dp),
             )
         }
+        TermField("pesquisa", search, { search = it }, modifier = Modifier.padding(horizontal = 16.dp))
         Rule()
         if (tracks.isEmpty()) {
             Txt(
@@ -101,8 +113,11 @@ fun LibraryScreen(
                 color = p.dim, modifier = Modifier.padding(16.dp),
             )
         } else if (view == "pastas") {
+            if (visibleFolders.isEmpty()) {
+                Txt("> sem resultados para esta pesquisa.", color = p.dim, modifier = Modifier.padding(16.dp))
+            }
             LazyColumn(Modifier.fillMaxSize()) {
-                items(folders, key = { it.key }) { entry ->
+                items(visibleFolders, key = { it.key }) { entry ->
                     val folder = entry.key
                     Row(
                         Modifier.fillMaxWidth().clickable { openFolder(folder) }.padding(start = 16.dp, end = 4.dp),
@@ -118,8 +133,11 @@ fun LibraryScreen(
                 }
             }
         } else {
+            if (visibleTracks.isEmpty()) {
+                Txt("> sem resultados para esta pesquisa.", color = p.dim, modifier = Modifier.padding(16.dp))
+            }
             LazyColumn(Modifier.fillMaxSize()) {
-                itemsIndexed(sorted, key = { _, t -> t.path }) { i, t ->
+                itemsIndexed(visibleTracks, key = { _, t -> t.path }) { i, t ->
                     TrackRow(
                         label = "",
                         track = t,
@@ -130,6 +148,7 @@ fun LibraryScreen(
                             "editar etiquetas" to { openTags(t) },
                         ),
                         onArtistClick = openArtist,
+                        onAlbumClick = openAlbum,
                     )
                 }
             }
@@ -155,11 +174,16 @@ fun FolderScreen(
     openTags: (Track) -> Unit,
     addToPlaylist: (List<Track>) -> Unit,
     openArtist: (String) -> Unit = {},
+    openAlbum: (Track) -> Unit = {},
 ) {
     val p = LocalPal.current
     val all by vm.tracks.collectAsState()
     val st by vm.player.state.collectAsState()
     val list = remember(all, folder) { all.filter { it.folder == folder }.sortedBy { it.path.lowercase() } }
+    var search by rememberSaveable(folder) { mutableStateOf("") }
+    val visibleList = remember(list, search) {
+        list.filter { FuzzySearch.matches(search, it.title, it.artist, it.album) }
+    }
     var selecting by remember { mutableStateOf(false) }
     var sel by remember { mutableStateOf(setOf<String>()) }
     var blockAsk by remember { mutableStateOf(false) }
@@ -172,17 +196,18 @@ fun FolderScreen(
                 Btn("aleat.", { vm.playShuffled(list) }, enabled = list.isNotEmpty())
                 Btn("selecionar", { selecting = true; sel = emptySet() })
             } else {
-                val allSelected = list.isNotEmpty() && sel.size == list.size
+                val allSelected = visibleList.isNotEmpty() && visibleList.all { it.path in sel }
                 Btn(if (allSelected) "limpar" else "todas", {
-                    sel = if (allSelected) emptySet() else list.map { it.path }.toSet()
+                    sel = if (allSelected) sel - visibleList.map { it.path }.toSet()
+                    else sel + visibleList.map { it.path }
                 })
                 Btn("fila", {
-                    vm.queueTracks(list.filter { it.path in sel })
+                    vm.queueTracks(visibleList.filter { it.path in sel })
                     selecting = false
                     sel = emptySet()
                 }, active = sel.isNotEmpty(), enabled = sel.isNotEmpty())
                 Btn("+playlist", {
-                    addToPlaylist(list.filter { it.path in sel })
+                    addToPlaylist(visibleList.filter { it.path in sel })
                     selecting = false
                     sel = emptySet()
                 }, active = sel.isNotEmpty(), enabled = sel.isNotEmpty())
@@ -190,12 +215,16 @@ fun FolderScreen(
             }
         }
         Row(Modifier.padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Txt("${list.size} faixas", color = p.dim, size = 11.sp, modifier = Modifier.padding(start = 6.dp).weight(1f))
+            Txt("${visibleList.size} / ${list.size} faixas", color = p.dim, size = 11.sp, modifier = Modifier.padding(start = 6.dp).weight(1f))
             Btn("bloquear pasta", { blockAsk = true }, size = 11.sp)
         }
+        TermField("pesquisa", search, { search = it }, modifier = Modifier.padding(horizontal = 16.dp))
         Rule()
+        if (visibleList.isEmpty()) {
+            Txt("> sem resultados para esta pesquisa.", color = p.dim, modifier = Modifier.padding(16.dp))
+        }
         LazyColumn(Modifier.fillMaxSize()) {
-            itemsIndexed(list, key = { _, t -> t.path }) { i, t ->
+            itemsIndexed(visibleList, key = { _, t -> t.path }) { i, t ->
                 TrackRow(
                     label = (i + 1).toString().padStart(2, '0'),
                     track = t,
@@ -204,13 +233,14 @@ fun FolderScreen(
                     selected = t.path in sel,
                     onClick = {
                         if (selecting) sel = if (t.path in sel) sel - t.path else sel + t.path
-                        else vm.playTracks(list, i)
+                        else vm.playTracks(visibleList, i)
                     },
                     menu = listOf(
                         "adicionar à playlist" to { addToPlaylist(listOf(t)) },
                         "editar etiquetas" to { openTags(t) },
                     ),
                     onArtistClick = openArtist,
+                    onAlbumClick = openAlbum,
                 )
             }
         }
@@ -268,7 +298,14 @@ fun PlaylistsScreen(vm: AppViewModel, open: (String) -> Unit) {
 }
 
 @Composable
-fun PlaylistScreen(vm: AppViewModel, id: String, back: () -> Unit, openTags: (Track) -> Unit, openArtist: (String) -> Unit = {}) {
+fun PlaylistScreen(
+    vm: AppViewModel,
+    id: String,
+    back: () -> Unit,
+    openTags: (Track) -> Unit,
+    openArtist: (String) -> Unit = {},
+    openAlbum: (Track) -> Unit = {},
+) {
     val p = LocalPal.current
     val pls by vm.playlists.collectAsState()
     val byPath by vm.allByPath.collectAsState()
@@ -280,6 +317,13 @@ fun PlaylistScreen(vm: AppViewModel, id: String, back: () -> Unit, openTags: (Tr
     }
     var renaming by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf(false) }
+    var search by rememberSaveable(id) { mutableStateOf("") }
+    val visiblePaths = remember(pl.paths, byPath, search) {
+        pl.paths.filter { path ->
+            val track = byPath[path]
+            track != null && FuzzySearch.matches(search, track.title, track.artist, track.album)
+        }
+    }
 
     Column(Modifier.fillMaxSize()) {
         Prompt(pl.name) { Btn("voltar", back) }
@@ -290,13 +334,16 @@ fun PlaylistScreen(vm: AppViewModel, id: String, back: () -> Unit, openTags: (Tr
             Btn("renomear", { renaming = true })
             Btn("apagar", { deleting = true })
         }
-        Txt("${pl.paths.size} faixas", color = p.dim, size = 11.sp, modifier = Modifier.padding(start = 16.dp, bottom = 6.dp))
+        Txt("${visiblePaths.size} / ${pl.paths.size} faixas", color = p.dim, size = 11.sp, modifier = Modifier.padding(start = 16.dp, bottom = 6.dp))
+        TermField("pesquisa", search, { search = it }, modifier = Modifier.padding(horizontal = 16.dp))
         Rule()
         if (pl.paths.isEmpty()) {
             Txt("> vazia. abre uma pasta na biblioteca e usa selecionar > +playlist.", color = p.dim, modifier = Modifier.padding(16.dp))
+        } else if (visiblePaths.isEmpty()) {
+            Txt("> sem resultados para esta pesquisa.", color = p.dim, modifier = Modifier.padding(16.dp))
         }
         LazyColumn(Modifier.fillMaxSize()) {
-            itemsIndexed(pl.paths, key = { _, path -> path }) { i, path ->
+            itemsIndexed(visiblePaths, key = { _, path -> path }) { i, path ->
                 val t = byPath[path]
                 if (t != null) {
                     TrackRow(
@@ -309,6 +356,7 @@ fun PlaylistScreen(vm: AppViewModel, id: String, back: () -> Unit, openTags: (Tr
                             "editar etiquetas" to { openTags(t) },
                         ),
                         onArtistClick = openArtist,
+                        onAlbumClick = openAlbum,
                         showCover = true,
                     )
                 } else {
