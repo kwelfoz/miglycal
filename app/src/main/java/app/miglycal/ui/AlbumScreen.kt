@@ -42,6 +42,7 @@ import app.miglycal.data.AlbumInfo
 import app.miglycal.data.AlbumOnline
 import app.miglycal.data.AlbumTagField
 import app.miglycal.data.AlbumTrackInfo
+import app.miglycal.data.Art
 import app.miglycal.data.ArtistNames
 import app.miglycal.data.TagIO
 import app.miglycal.data.Tags
@@ -50,6 +51,7 @@ import coil.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.concurrent.atomic.AtomicInteger
 
 private data class AlbumTrackRow(val track: Track, val tags: Tags)
 
@@ -67,6 +69,7 @@ fun AlbumScreen(
     var rows by remember(album, artist) { mutableStateOf<List<AlbumTrackRow>>(emptyList()) }
     var info by remember(album, artist) { mutableStateOf<AlbumInfo?>(null) }
     var loading by remember(album, artist) { mutableStateOf(true) }
+    var localCoverAvailable by remember(album, artist) { mutableStateOf(false) }
     var expandedDescription by remember(album, artist) { mutableStateOf(false) }
 
     LaunchedEffect(album, artist, candidates) {
@@ -88,6 +91,11 @@ fun AlbumScreen(
         rows = selected
         info = runCatching { AlbumOnline.info(artist, album) }.getOrNull()
         loading = false
+    }
+
+    LaunchedEffect(rows) {
+        val path = rows.firstOrNull()?.track?.path
+        localCoverAvailable = path != null && withContext(Dispatchers.IO) { Art.load(path) != null }
     }
 
     val localTracks = rows.map { it.track }
@@ -120,15 +128,17 @@ fun AlbumScreen(
             ) {
                 Box(Modifier.size(132.dp).background(p.surface)) {
                     val localCover = rows.firstOrNull()?.track?.path
-                    if (localCover != null) {
+                    if (localCover != null && localCoverAvailable) {
                         CoverImage(localCover, Modifier.fillMaxSize())
-                    } else {
+                    } else if (info?.imageUrl != null) {
                         AsyncImage(
                             model = info?.imageUrl,
                             contentDescription = "Album cover",
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop,
                         )
+                    } else if (localCover != null) {
+                        CoverImage(localCover, Modifier.fillMaxSize())
                     }
                 }
                 Column(Modifier.weight(1f)) {
@@ -270,8 +280,15 @@ fun AlbumTagEditorScreen(
                 }
             }
             val failed = results.filter { it.second.isFailure }
-            MediaScannerConnection.scanFile(context, tracks.map { it.path }.toTypedArray(), null) { _, _ -> }
-            vm.refresh()
+            val paths = tracks.map { it.path }.toTypedArray()
+            if (paths.isNotEmpty()) {
+                val remaining = AtomicInteger(paths.size)
+                MediaScannerConnection.scanFile(context, paths, null) { _, _ ->
+                    if (remaining.decrementAndGet() == 0) vm.refresh()
+                }
+            } else {
+                vm.refresh()
+            }
             status = if (failed.isEmpty()) {
                 "> etiquetas guardadas em ${results.size} faixa(s)."
             } else {
@@ -295,27 +312,27 @@ fun AlbumTagEditorScreen(
             Section("campos a aplicar")
 
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Btn(if (AlbumTagField.ALBUM in selectedFields) "[x] álbum" else "[ ] álbum", { toggle(AlbumTagField.ALBUM) }, active = AlbumTagField.ALBUM in selectedFields)
+                Btn(if (AlbumTagField.ALBUM in selectedFields) "✓ álbum" else "álbum", { toggle(AlbumTagField.ALBUM) }, active = AlbumTagField.ALBUM in selectedFields)
                 if (AlbumTagField.ALBUM in mixedFields) Txt("valores diferentes", color = p.dim, size = 10.sp)
             }
             TermField("álbum", values.album, { values = values.copy(album = it) })
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Btn(if (AlbumTagField.ALBUM_ARTIST in selectedFields) "[x] artista álb." else "[ ] artista álb.", { toggle(AlbumTagField.ALBUM_ARTIST) }, active = AlbumTagField.ALBUM_ARTIST in selectedFields)
+                Btn(if (AlbumTagField.ALBUM_ARTIST in selectedFields) "✓ artista álb." else "artista álb.", { toggle(AlbumTagField.ALBUM_ARTIST) }, active = AlbumTagField.ALBUM_ARTIST in selectedFields)
                 if (AlbumTagField.ALBUM_ARTIST in mixedFields) Txt("valores diferentes", color = p.dim, size = 10.sp)
             }
             TermField("artista álb.", values.albumArtist, { values = values.copy(albumArtist = it) })
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Btn(if (AlbumTagField.YEAR in selectedFields) "[x] ano" else "[ ] ano", { toggle(AlbumTagField.YEAR) }, active = AlbumTagField.YEAR in selectedFields)
+                Btn(if (AlbumTagField.YEAR in selectedFields) "✓ ano" else "ano", { toggle(AlbumTagField.YEAR) }, active = AlbumTagField.YEAR in selectedFields)
                 if (AlbumTagField.YEAR in mixedFields) Txt("valores diferentes", color = p.dim, size = 10.sp)
             }
             TermField("ano", values.year, { values = values.copy(year = it) })
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Btn(if (AlbumTagField.GENRE in selectedFields) "[x] género" else "[ ] género", { toggle(AlbumTagField.GENRE) }, active = AlbumTagField.GENRE in selectedFields)
+                Btn(if (AlbumTagField.GENRE in selectedFields) "✓ género" else "género", { toggle(AlbumTagField.GENRE) }, active = AlbumTagField.GENRE in selectedFields)
                 if (AlbumTagField.GENRE in mixedFields) Txt("valores diferentes", color = p.dim, size = 10.sp)
             }
             TermField("género", values.genre, { values = values.copy(genre = it) })
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Btn(if (AlbumTagField.COMMENT in selectedFields) "[x] comentário" else "[ ] comentário", { toggle(AlbumTagField.COMMENT) }, active = AlbumTagField.COMMENT in selectedFields)
+                Btn(if (AlbumTagField.COMMENT in selectedFields) "✓ comentário" else "comentário", { toggle(AlbumTagField.COMMENT) }, active = AlbumTagField.COMMENT in selectedFields)
                 if (AlbumTagField.COMMENT in mixedFields) Txt("valores diferentes", color = p.dim, size = 10.sp)
             }
             TermField("comentário", values.comment, { values = values.copy(comment = it) }, singleLine = false)
