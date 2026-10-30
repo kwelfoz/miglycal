@@ -9,6 +9,8 @@ import org.jaudiotagger.tag.FieldKey
 import org.jaudiotagger.tag.images.ArtworkFactory
 import java.io.File
 
+enum class AlbumTagField { ALBUM, ALBUM_ARTIST, YEAR, GENRE, COMMENT }
+
 /** Leitura e escrita de etiquetas (ID3 em MP3, Vorbis comments em FLAC). */
 object TagIO {
 
