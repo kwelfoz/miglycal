@@ -21,6 +21,22 @@ fun localizeText(raw: String, language: String): String {
     }
 
     val pairs = listOf(
+        "pesquisa" to "search",
+        "álbum" to "album",
+        "álbuns" to "albums",
+        "editar etiquetas do álbum" to "edit album tags",
+        "etiquetas do álbum" to "album tags",
+        "campos a aplicar" to "fields to apply",
+        "valores diferentes" to "different values",
+        "aplicação" to "apply",
+        "guardar em todas" to "save to all",
+        "descrição" to "description",
+        "tracklist" to "tracklist",
+        "a carregar informações do álbum..." to "loading album information...",
+        "não há faixas locais associadas a este álbum." to "no local tracks are linked to this album.",
+        "seleciona pelo menos um campo para aplicar." to "select at least one field to apply.",
+        "título e artista de cada faixa ficam intactos." to "each track's title and artist remain unchanged.",
+        "as alterações selecionadas são aplicadas apenas aos campos assinalados." to "only selected fields are applied.",
         "biblioteca" to "library",
         "pastas" to "folders",
         "tudo" to "all",
