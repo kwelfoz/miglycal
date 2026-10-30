@@ -32,13 +32,73 @@ object TagIO {
         AudioFileIO.read(File(path)).tag?.getFirst(FieldKey.LYRICS)?.takeIf { it.isNotBlank() }
     }.getOrNull()
 
-    /** Formato, sample rate e bitrate do ficheiro. */
+    /** Formato, sample rate e bitrate medido a partir do ficheiro. */
     fun info(path: String): AudioInfo? {
         val ext = path.substringAfterLast('.').lowercase()
         return runCatching {
             val h = AudioFileIO.read(File(path)).audioHeader
-            AudioInfo(ext, h.sampleRateAsNumber, h.bitRateAsNumber.toInt(), h.isVariableBitRate)
+            val measured = if (ext == "mp3") {
+                mp3AverageBitrate(path, h.trackLength.toLong() * 1000L)
+            } else null
+            val bitrate = when {
+                measured == null -> h.bitRateAsNumber.toInt()
+                h.isVariableBitRate -> measured
+                else -> normalizeCbrBitrate(measured)
+            }
+            AudioInfo(ext, h.sampleRateAsNumber, bitrate, h.isVariableBitRate)
         }.getOrNull() ?: infoFallback(path, ext)
+    }
+
+    /**
+     * MP3 headers often expose the first frame's bitrate, which is misleading for VBR.
+     * Measure the audio payload size over its duration and exclude ID3 tags so that the
+     * displayed value is the actual average bitrate of the file.
+     */
+    private fun mp3AverageBitrate(path: String, headerDurationMs: Long): Int? = runCatching {
+        val file = File(path)
+        var audioBytes = file.length()
+        java.io.RandomAccessFile(file, "r").use { input ->
+            if (input.length() >= 10) {
+                val header = ByteArray(10)
+                input.readFully(header)
+                if (header[0] == 'I'.code.toByte() &&
+                    header[1] == 'D'.code.toByte() &&
+                    header[2] == '3'.code.toByte()
+                ) {
+                    val size = ((header[6].toInt() and 0x7f) shl 21) or
+                        ((header[7].toInt() and 0x7f) shl 14) or
+                        ((header[8].toInt() and 0x7f) shl 7) or
+                        (header[9].toInt() and 0x7f)
+                    audioBytes -= 10L + size + if ((header[5].toInt() and 0x10) != 0) 10L else 0L
+                }
+            }
+            if (input.length() >= 128) {
+                input.seek(input.length() - 128)
+                val tail = ByteArray(3)
+                input.readFully(tail)
+                if (tail[0] == 'T'.code.toByte() && tail[1] == 'A'.code.toByte() && tail[2] == 'G'.code.toByte()) {
+                    audioBytes -= 128L
+                }
+            }
+        }
+        val retriever = MediaMetadataRetriever()
+        val durationMs = try {
+            retriever.setDataSource(path)
+            retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
+                ?.takeIf { it > 0L } ?: headerDurationMs.takeIf { it > 0L }
+        } finally {
+            retriever.release()
+        } ?: return@runCatching null
+
+        if (audioBytes <= 0L || durationMs <= 0L) return@runCatching null
+        val measured = (audioBytes * 8.0 / durationMs).toInt()
+        measured.takeIf { it in 8..1000 }
+    }.getOrNull()
+
+    private fun normalizeCbrBitrate(value: Int): Int {
+        val standard = intArrayOf(32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 192, 224, 256, 320)
+        val nearest = standard.minByOrNull { kotlin.math.abs(it - value) } ?: value
+        return if (kotlin.math.abs(nearest - value) <= 5) nearest else value
     }
 
     private fun infoFallback(path: String, ext: String): AudioInfo? = runCatching {
@@ -75,6 +135,44 @@ object TagIO {
         } finally {
             tmp.delete()
         }
+    }
+
+    /** Updates only the selected album-level fields in one local file. */
+    fun writeAlbum(ctx: Context, path: String, tags: Tags, fields: Set<AlbumTagField>) {
+        require(fields.isNotEmpty()) { "não foram selecionados campos para alterar" }
+        applyAlbumFields(path, tags, fields)
+    }
+
+    /** Same update through a user-approved MediaStore URI on Android 11+. */
+    fun writeAlbumViaUri(ctx: Context, uri: android.net.Uri, tags: Tags, fields: Set<AlbumTagField>) {
+        require(fields.isNotEmpty()) { "não foram selecionados campos para alterar" }
+        val mime = ctx.contentResolver.getType(uri).orEmpty()
+        val ext = if (mime.contains("flac", ignoreCase = true)) "flac" else "mp3"
+        val tmp = File(ctx.cacheDir, "album_edit_${System.nanoTime()}.$ext")
+        try {
+            val input = ctx.contentResolver.openInputStream(uri) ?: error("não foi possível ler o ficheiro")
+            input.use { src -> tmp.outputStream().use { dst -> src.copyTo(dst) } }
+            applyAlbumFields(tmp.path, tags, fields)
+            val output = ctx.contentResolver.openOutputStream(uri, "wt") ?: error("não foi possível escrever no ficheiro")
+            output.use { dst -> tmp.inputStream().use { src -> src.copyTo(dst) } }
+        } finally {
+            tmp.delete()
+        }
+    }
+
+    private fun applyAlbumFields(path: String, values: Tags, fields: Set<AlbumTagField>) {
+        val audio = AudioFileIO.read(File(path))
+        val tag = audio.tagOrCreateAndSetDefault
+        fun put(key: FieldKey, value: String) {
+            if (value.isBlank()) runCatching { tag.deleteField(key) }
+            else tag.setField(key, value.trim())
+        }
+        if (AlbumTagField.ALBUM in fields) put(FieldKey.ALBUM, values.album)
+        if (AlbumTagField.ALBUM_ARTIST in fields) put(FieldKey.ALBUM_ARTIST, values.albumArtist)
+        if (AlbumTagField.YEAR in fields) put(FieldKey.YEAR, values.year)
+        if (AlbumTagField.GENRE in fields) put(FieldKey.GENRE, values.genre)
+        if (AlbumTagField.COMMENT in fields) put(FieldKey.COMMENT, values.comment)
+        audio.commit()
     }
 
     /** Grava etiquetas (e opcionalmente capa e letra) diretamente no ficheiro (Android 10 ou inferior). */
