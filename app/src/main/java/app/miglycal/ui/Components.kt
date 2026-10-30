@@ -243,6 +243,7 @@ fun TrackRow(
     selected: Boolean = false,
     menu: List<Pair<String, () -> Unit>> = emptyList(),
     onArtistClick: ((String) -> Unit)? = null,
+    onAlbumClick: ((Track) -> Unit)? = null,
     showCover: Boolean = false,
 ) {
     val p = LocalPal.current
@@ -279,7 +280,14 @@ fun TrackRow(
                         modifier = if (onArtistClick != null) Modifier.clickable { onArtistClick(artist) } else Modifier,
                     )
                 }
-                Txt(" · ${track.album}", color = p.dim, size = 11.sp, maxLines = 1)
+                Txt(" · ", color = p.dim, size = 11.sp)
+                Txt(
+                    track.album,
+                    color = if (onAlbumClick != null) p.accent else p.dim,
+                    size = 11.sp,
+                    maxLines = 1,
+                    modifier = if (onAlbumClick != null) Modifier.clickable { onAlbumClick(track) } else Modifier,
+                )
             }
         }
         Txt(fmt(track.durationMs), color = p.dim, size = 11.sp, modifier = Modifier.padding(horizontal = 6.dp))
