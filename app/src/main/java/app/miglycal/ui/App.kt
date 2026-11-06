@@ -31,6 +31,8 @@ data class DFolder(val path: String) : Detail
 data class DPlaylist(val id: String) : Detail
 data class DTags(val track: Track) : Detail
 data class DArtist(val name: String) : Detail
+data class DAlbum(val name: String, val artist: String, val candidates: List<Track>) : Detail
+data class DAlbumTags(val album: String, val tracks: List<Track>) : Detail
 
 @Composable
 fun MiglycalApp(vm: AppViewModel, hasPermission: Boolean, requestPermission: () -> Unit) {
@@ -56,9 +58,15 @@ private fun MainShell(vm: AppViewModel) {
     var full by remember { mutableStateOf(false) }
     var addTarget by remember { mutableStateOf<List<Track>?>(null) }
     val top = stack.lastOrNull()
-    val focusMode = top is DTags // no editor de etiquetas esconde mini leitor e navegação
+    val focusMode = top is DTags || top is DAlbumTags // no editor de etiquetas esconde mini leitor e navegação
 
     fun pop() { if (stack.isNotEmpty()) stack.removeAt(stack.lastIndex) }
+    fun openAlbum(track: Track) {
+        val candidates = vm.tracks.value.filter {
+            it.album.equals(track.album, ignoreCase = true)
+        }
+        stack.add(DAlbum(track.album, track.artist, candidates.ifEmpty { listOf(track) }))
+    }
 
     BackHandler(enabled = full) { full = false }
     BackHandler(enabled = !full && stack.isNotEmpty()) { pop() }
@@ -72,14 +80,27 @@ private fun MainShell(vm: AppViewModel) {
                         openTags = { stack.add(DTags(it)) },
                         addToPlaylist = { addTarget = it },
                         openArtist = { stack.add(DArtist(it)) },
+                        openAlbum = ::openAlbum,
                     )
                     is DPlaylist -> PlaylistScreen(
                         vm, d.id, back = { pop() },
                         openTags = { stack.add(DTags(it)) },
                         openArtist = { stack.add(DArtist(it)) },
+                        openAlbum = ::openAlbum,
                     )
                     is DTags -> TagEditorScreen(vm, d.track) { pop() }
-                    is DArtist -> ArtistScreen(d.name, vm) { pop() }
+                    is DArtist -> ArtistScreen(d.name, vm, back = { pop() }) { album, tracks ->
+                        stack.add(DAlbum(album, d.name, tracks))
+                    }
+                    is DAlbum -> AlbumScreen(
+                        album = d.name,
+                        artist = d.artist,
+                        candidates = d.candidates,
+                        vm = vm,
+                        back = { pop() },
+                        editTags = { tracks -> stack.add(DAlbumTags(d.name, tracks)) },
+                    )
+                    is DAlbumTags -> AlbumTagEditorScreen(vm, d.album, d.tracks) { pop() }
                     null -> when (tab) {
                         "biblioteca" -> LibraryScreen(
                             vm,
@@ -87,6 +108,7 @@ private fun MainShell(vm: AppViewModel) {
                             openTags = { stack.add(DTags(it)) },
                             addToPlaylist = { addTarget = it },
                             openArtist = { stack.add(DArtist(it)) },
+                            openAlbum = ::openAlbum,
                         )
                         "playlists" -> PlaylistsScreen(vm) { stack.add(DPlaylist(it)) }
                         else -> SettingsScreen(vm)

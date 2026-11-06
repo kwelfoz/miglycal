@@ -35,7 +35,7 @@ import coil.compose.SubcomposeAsyncImageContent
 import coil.compose.AsyncImagePainter
 
 @Composable
-fun ArtistScreen(name: String, vm: AppViewModel, back: () -> Unit) {
+fun ArtistScreen(name: String, vm: AppViewModel, back: () -> Unit, openAlbum: (String, List<Track>) -> Unit = { _, _ -> }) {
     val p = LocalPal.current
     val tracks by vm.tracks.collectAsState()
     val player by vm.player.state.collectAsState()
@@ -124,6 +124,7 @@ fun ArtistScreen(name: String, vm: AppViewModel, back: () -> Unit) {
                             Txt(album, color = p.text, bold = true, maxLines = 2)
                             Txt("${albumTracks.size} track(s)", color = p.dim, size = 10.sp)
                         }
+                        Btn("álbum", { openAlbum(album, albumTracks) }, size = 10.sp)
                         Btn("play", { vm.playTracks(albumTracks, 0) }, active = true, size = 10.sp)
                     }
                     albumTracks.forEachIndexed { index, track ->

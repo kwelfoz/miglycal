@@ -62,7 +62,7 @@ data class AudioInfo(
     fun label(): String = when {
         format == "flac" && sampleRateHz > 0 -> "flac // ${khz(sampleRateHz)} khz"
         format == "flac" -> "flac"
-        bitrateKbps > 0 -> "$format // ${if (variableBitrate) "~" else ""}$bitrateKbps kbps"
+        bitrateKbps > 0 -> "$format // ${if (variableBitrate) "~" else ""}$bitrateKbps kbps${if (variableBitrate) " VBR" else ""}"
         else -> format
     }
 
