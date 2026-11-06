@@ -48,7 +48,7 @@ fun ArtistScreen(name: String, vm: AppViewModel, back: () -> Unit, openAlbum: (S
             ArtistNames.split(track.artist).any { it.equals(name, ignoreCase = true) }
         }.sortedWith(compareBy<Track> { it.album.lowercase() }.thenBy { it.title.lowercase() })
     }
-    val albums = remember(localTracks) { localTracks.groupBy { it.album.ifBlank { "álbum desconhecido" } } }
+    val albums = remember(localTracks) { localTracks.groupBy { AlbumNames.baseTitle(it.album).ifBlank { "álbum desconhecido" } } }
 
     LaunchedEffect(name) {
         loading = true

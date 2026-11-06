@@ -84,16 +84,15 @@ fun LibraryScreen(
     var search by rememberSaveable { mutableStateOf("") }
     var blockAsk by remember { mutableStateOf<String?>(null) }
     val folders = remember(tracks) { tracks.groupBy { it.folder }.entries.sortedBy { it.key.lowercase() } }
-    val visibleFolders = remember(folders, search) {
-        folders.filter { entry ->
-            search.isBlank() || FuzzySearch.matches(search, entry.key) ||
-                entry.value.any { FuzzySearch.matches(search, it.title, it.artist, it.album) }
+    val folderIndex = remember(folders) {
+        FuzzySearch.index(folders) { entry ->
+            listOf(entry.key) + entry.value.flatMap { listOf(it.title, it.artist, it.album) }
         }
     }
+    val visibleFolders = remember(folderIndex, search) { folderIndex.search(search) }
     val sorted = remember(tracks) { tracks.sortedBy { it.title.lowercase() } }
-    val visibleTracks = remember(sorted, search) {
-        sorted.filter { FuzzySearch.matches(search, it.title, it.artist, it.album) }
-    }
+    val trackIndex = remember(sorted) { FuzzySearch.index(sorted) { listOf(it.title, it.artist, it.album) } }
+    val visibleTracks = remember(trackIndex, search) { trackIndex.search(search) }
 
     Column(Modifier.fillMaxSize()) {
         Prompt("biblioteca") { Btn(if (loading) "..." else "rescan", { vm.refresh() }) }
@@ -182,9 +181,10 @@ fun FolderScreen(
     val st by vm.player.state.collectAsState()
     val list = remember(all, folder) { all.filter { it.folder == folder }.sortedBy { it.path.lowercase() } }
     var search by rememberSaveable(folder) { mutableStateOf("") }
-    val visibleList = remember(list, search) {
-        list.filter { FuzzySearch.matches(search, it.title, it.artist, it.album) }
+    val folderTrackIndex = remember(list) {
+        FuzzySearch.index(list) { listOf(it.title, it.artist, it.album) }
     }
+    val visibleList = remember(folderTrackIndex, search) { folderTrackIndex.search(search) }
     var selecting by remember { mutableStateOf(false) }
     var sel by remember { mutableStateOf(setOf<String>()) }
     var blockAsk by remember { mutableStateOf(false) }
@@ -242,6 +242,7 @@ fun FolderScreen(
                     ),
                     onArtistClick = openArtist,
                     onAlbumClick = openAlbum,
+                    showCover = true,
                 )
             }
         }
@@ -319,12 +320,13 @@ fun PlaylistScreen(
     var renaming by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf(false) }
     var search by rememberSaveable(id) { mutableStateOf("") }
-    val visiblePaths = remember(pl.paths, byPath, search) {
-        pl.paths.filter { path ->
+    val playlistIndex = remember(pl.paths, byPath) {
+        FuzzySearch.index(pl.paths) { path ->
             val track = byPath[path]
-            search.isBlank() || (track != null && FuzzySearch.matches(search, track.title, track.artist, track.album))
+            if (track == null) listOf(path) else listOf(path, track.title, track.artist, track.album)
         }
     }
+    val visiblePaths = remember(playlistIndex, search) { playlistIndex.search(search) }
 
     Column(Modifier.fillMaxSize()) {
         Prompt(pl.name) { Btn("voltar", back) }
@@ -431,10 +433,11 @@ fun SettingsScreen(vm: AppViewModel) {
                 Accent.entries.forEach { a ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(10.dp).background(a.color))
-                        Btn(a.label, { vm.setAccent(a) }, active = a == accent)
+                        Btn(a.label, { vm.setAccent(a.color) }, active = a.color == accent)
                     }
                 }
             }
+            AccentColorPicker(accent, vm::setAccent)
 
             MusicFoldersPicker(vm)
 

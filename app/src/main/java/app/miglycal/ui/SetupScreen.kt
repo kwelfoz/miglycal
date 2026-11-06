@@ -101,10 +101,11 @@ fun FirstRunSetupScreen(vm: AppViewModel) {
                     Accent.entries.forEach { choice ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(Modifier.size(10.dp).background(choice.color))
-                            Btn(choice.label, { vm.setAccent(choice) }, active = choice == accent)
+                            Btn(choice.label, { vm.setAccent(choice.color) }, active = choice.color == accent)
                         }
                     }
                 }
+                AccentColorPicker(accent, vm::setAccent)
             }
 
             SetupCard("Pastas de música") {

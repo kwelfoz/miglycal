@@ -30,6 +30,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -41,6 +42,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
@@ -280,15 +283,14 @@ fun TrackRow(
                         modifier = if (onArtistClick != null) Modifier.clickable { onArtistClick(artist) } else Modifier,
                     )
                 }
-                Txt(" · ", color = p.dim, size = 11.sp)
-                Txt(
-                    track.album,
-                    color = if (onAlbumClick != null) p.accent else p.dim,
-                    size = 11.sp,
-                    maxLines = 1,
-                    modifier = if (onAlbumClick != null) Modifier.clickable { onAlbumClick(track) } else Modifier,
-                )
             }
+            Txt(
+                track.album,
+                color = if (onAlbumClick != null) p.accent else p.dim,
+                size = 11.sp,
+                maxLines = 1,
+                modifier = if (onAlbumClick != null) Modifier.clickable { onAlbumClick(track) } else Modifier,
+            )
         }
         Txt(fmt(track.durationMs), color = p.dim, size = 11.sp, modifier = Modifier.padding(horizontal = 6.dp))
         if (menu.isNotEmpty()) {
@@ -317,6 +319,126 @@ fun CoverImage(path: String?, modifier: Modifier = Modifier, version: Int = 0) {
             Image(b.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         } else {
             Txt("no cover", color = p.dim, size = 11.sp)
+        }
+    }
+}
+
+
+/** Interactive HSV colour wheel with exact HEX and RGB controls. */
+@Composable
+fun AccentColorPicker(color: Color, onColorChange: (Color) -> Unit) {
+    val p = LocalPal.current
+    var hex by remember { mutableStateOf("#55E67A") }
+    var red by remember { mutableStateOf("85") }
+    var green by remember { mutableStateOf("230") }
+    var blue by remember { mutableStateOf("122") }
+    LaunchedEffect(color) {
+        val argb = color.toArgb()
+        hex = String.format("#%02X%02X%02X", android.graphics.Color.red(argb), android.graphics.Color.green(argb), android.graphics.Color.blue(argb))
+        red = android.graphics.Color.red(argb).toString()
+        green = android.graphics.Color.green(argb).toString()
+        blue = android.graphics.Color.blue(argb).toString()
+    }
+    fun applyRgb(r: String, g: String, b: String) {
+        val rv = r.toIntOrNull()
+        val gv = g.toIntOrNull()
+        val bv = b.toIntOrNull()
+        if (rv != null && gv != null && bv != null && rv in 0..255 && gv in 0..255 && bv in 0..255) {
+            onColorChange(Color(android.graphics.Color.rgb(rv, gv, bv)))
+        }
+    }
+    fun adjustBrightness(delta: Float) {
+        val hsv = FloatArray(3)
+        android.graphics.Color.colorToHSV(color.toArgb(), hsv)
+        hsv[2] = (hsv[2] + delta).coerceIn(0.08f, 1f)
+        onColorChange(Color(android.graphics.Color.HSVToColor(hsv)))
+    }
+    Column(Modifier.fillMaxWidth()) {
+        Txt("roda de cores", color = p.accent, size = 11.sp, bold = true)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            ColorWheel(color, onColorChange)
+            Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                Box(Modifier.size(42.dp).background(color).border(1.dp, p.line))
+                Spacer(Modifier.height(8.dp))
+                Btn("mais claro", { adjustBrightness(0.10f) })
+                Btn("mais escuro", { adjustBrightness(-0.10f) })
+            }
+        }
+        TermField("hex", hex, { value ->
+            hex = value
+            val digits = value.trim().removePrefix("#")
+            if (digits.matches(Regex("[0-9a-fA-F]{6}"))) {
+                onColorChange(Color(android.graphics.Color.parseColor("#${digits}")))
+            }
+        })
+        TermField("R", red, { red = it; applyRgb(it, green, blue) }, keyboardType = KeyboardType.Number)
+        TermField("G", green, { green = it; applyRgb(red, it, blue) }, keyboardType = KeyboardType.Number)
+        TermField("B", blue, { blue = it; applyRgb(red, green, it) }, keyboardType = KeyboardType.Number)
+    }
+}
+
+@Composable
+private fun ColorWheel(color: Color, onColorChange: (Color) -> Unit) {
+    val selected = rememberUpdatedState(color)
+    val change = rememberUpdatedState(onColorChange)
+    val wheelColors = remember {
+        (0..360 step 30).map { hue ->
+            Color(android.graphics.Color.HSVToColor(floatArrayOf(hue.toFloat(), 1f, 1f)))
+        }
+    }
+    Canvas(Modifier.size(210.dp).pointerInput(Unit) {
+        detectTapGestures { point ->
+            val cx = size.width / 2f
+            val cy = size.height / 2f
+            val dx = point.x - cx
+            val dy = point.y - cy
+            val radius = minOf(size.width, size.height) * 0.45f
+            val distance = kotlin.math.sqrt(dx * dx + dy * dy)
+            if (distance <= radius) {
+                val hue = (Math.toDegrees(kotlin.math.atan2(dy, dx).toDouble()).toFloat() + 360f) % 360f
+                val hsv = FloatArray(3)
+                android.graphics.Color.colorToHSV(selected.value.toArgb(), hsv)
+                hsv[0] = hue
+                hsv[1] = (distance / radius).coerceIn(0f, 1f)
+                change.value(Color(android.graphics.Color.HSVToColor(hsv)))
+            }
+        }
+    }) {
+        val radius = minOf(size.width, size.height) * 0.45f
+        val center = Offset(size.width / 2f, size.height / 2f)
+        drawCircle(brush = Brush.sweepGradient(wheelColors), radius = radius, center = center)
+        // Fade to white towards the centre so the wheel also previews saturation.
+        drawCircle(
+            brush = Brush.radialGradient(listOf(Color.White, Color.Transparent), center = center, radius = radius),
+            radius = radius,
+            center = center,
+        )
+        val hsv = FloatArray(3)
+        android.graphics.Color.colorToHSV(color.toArgb(), hsv)
+        val angle = Math.toRadians(hsv[0].toDouble())
+        val markerRadius = radius * hsv[1]
+        val marker = Offset(
+            center.x + kotlin.math.cos(angle).toFloat() * markerRadius,
+            center.y + kotlin.math.sin(angle).toFloat() * markerRadius,
+        )
+        drawCircle(Color.Black, radius = 9.dp.toPx(), center = marker)
+        drawCircle(Color.White, radius = 6.dp.toPx(), center = marker)
+        drawCircle(color, radius = 4.dp.toPx(), center = marker)
+    }
+}
+
+/** Artist values shown as removable chips while keeping the editable source string. */
+@Composable
+fun ArtistChipsField(label: String, value: String, onChange: (String) -> Unit) {
+    val artists = remember(value) { app.miglycal.data.ArtistNames.split(value) }
+    Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        TermField(label, value, onChange)
+        Flow {
+            artists.forEach { artist ->
+                Btn("× $artist", {
+                    onChange(artists.filterNot { it.equals(artist, ignoreCase = true) }.joinToString(", "))
+                }, size = 10.sp)
+            }
         }
     }
 }

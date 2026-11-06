@@ -18,22 +18,26 @@ object Library {
             MediaStore.Audio.Media.ARTIST,
             MediaStore.Audio.Media.ALBUM,
             MediaStore.Audio.Media.DURATION,
+            MediaStore.Audio.Media.DISPLAY_NAME,
         )
-        val sel = "(${MediaStore.Audio.Media.DATA} LIKE ? OR ${MediaStore.Audio.Media.DATA} LIKE ?)"
+        val sel = "(${MediaStore.Audio.Media.DISPLAY_NAME} LIKE ? OR ${MediaStore.Audio.Media.DISPLAY_NAME} LIKE ?)"
         val args = arrayOf("%.flac", "%.mp3")
         val out = ArrayList<Track>()
 
         fun clean(s: String?): String? = s?.takeIf { it.isNotBlank() && it != "<unknown>" }
 
-        ctx.contentResolver.query(uri, proj, sel, args, null)?.use { c ->
+        ctx.contentResolver.query(uri, proj, sel, args, "${MediaStore.Audio.Media.TITLE} COLLATE NOCASE ASC")?.use { c ->
             val iId = c.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
             val iData = c.getColumnIndexOrThrow(MediaStore.Audio.Media.DATA)
             val iTitle = c.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
             val iArtist = c.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
             val iAlbum = c.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
             val iDur = c.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
+            val iName = c.getColumnIndexOrThrow(MediaStore.Audio.Media.DISPLAY_NAME)
             while (c.moveToNext()) {
                 val path = c.getString(iData) ?: continue
+                val displayName = c.getString(iName) ?: continue
+                if (!displayName.endsWith(".flac", true) && !displayName.endsWith(".mp3", true)) continue
                 val id = c.getLong(iId)
                 out += Track(
                     id = id,
@@ -47,7 +51,7 @@ object Library {
                 )
             }
         }
-        return out.sortedBy { it.path.lowercase() }
+        return out
     }
 
     /** Converts a folder chosen with Android's system picker into its MediaStore path. */

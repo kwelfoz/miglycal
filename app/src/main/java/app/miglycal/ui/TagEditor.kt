@@ -162,7 +162,7 @@ fun TagEditorScreen(vm: AppViewModel, track: Track, back: () -> Unit) {
             Txt(track.path.substringAfterLast('/'), color = p.dim, size = 11.sp, modifier = Modifier.padding(vertical = 6.dp))
 
             TermField("título", tags.title, { tags = tags.copy(title = it) })
-            TermField("artista", tags.artist, { tags = tags.copy(artist = it) })
+            ArtistChipsField("artista", tags.artist, { tags = tags.copy(artist = it) })
             TermField("álbum", tags.album, { tags = tags.copy(album = it) })
             TermField("artista álb.", tags.albumArtist, { tags = tags.copy(albumArtist = it) })
             TermField("ano", tags.year, { tags = tags.copy(year = it) }, keyboardType = KeyboardType.Number)
@@ -173,7 +173,6 @@ fun TagEditorScreen(vm: AppViewModel, track: Track, back: () -> Unit) {
 
             // ------------------------------------------------------- tags online
             Section("tags online")
-            Txt("Pesquisa etiquetas completas através do MusicBrainz. As versões digitais são preferidas; os restantes lançamentos só aparecem se não houver correspondências digitais.", color = p.dim, size = 11.sp)
             Btn("procurar tags completas", {
                 scope.launch {
                     busy = true
@@ -316,7 +315,7 @@ fun TagEditorScreen(vm: AppViewModel, track: Track, back: () -> Unit) {
                 manualLyricsSearch = !manualLyricsSearch
             }, active = manualLyricsSearch)
             if (manualLyricsSearch) {
-                TermField("artista", lyricsSearchArtist, { lyricsSearchArtist = it })
+                ArtistChipsField("artista", lyricsSearchArtist, { lyricsSearchArtist = it })
                 TermField("música", lyricsSearchTitle, { lyricsSearchTitle = it })
                 Btn("pesquisar letras", {
                     scope.launch {
@@ -359,11 +358,6 @@ fun TagEditorScreen(vm: AppViewModel, track: Track, back: () -> Unit) {
                 }
                 val preview = if (useSynced && l.synced != null) l.synced else (l.plain ?: l.synced.orEmpty())
                 Txt(preview.lines().take(8).joinToString("\n"), color = p.dim, size = 11.sp, modifier = Modifier.padding(top = 6.dp))
-                Txt(
-                    if (useSynced && l.synced != null) "ao guardar: grava a letra sincronizada (formato LRC) no campo de letra do ficheiro."
-                    else "ao guardar: grava a letra normal no campo de letra do ficheiro.",
-                    color = p.dim, size = 10.sp, modifier = Modifier.padding(top = 4.dp),
-                )
             }
 
             // ------------------------------------------------------------- log

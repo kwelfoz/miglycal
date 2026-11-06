@@ -2,6 +2,8 @@ package app.miglycal
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.viewModelScope
 import app.miglycal.data.Library
 import app.miglycal.data.Playlist
@@ -27,7 +29,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private val all = MutableStateFlow<List<Track>>(emptyList())
     val blocked = MutableStateFlow(store.blocked)
-    val accent = MutableStateFlow(Accent.from(store.accent))
+    val accent = MutableStateFlow(readAccent(store.accent))
     val language = MutableStateFlow(store.language)
     val musicFolders = MutableStateFlow(store.musicFolders)
     val setupCompleted = MutableStateFlow(store.setupCompleted)
@@ -49,13 +51,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
     fun refresh() {
+        if (loading.value) return
+        loading.value = true
         viewModelScope.launch {
-            loading.value = true
-            val list = withContext(Dispatchers.IO) {
-                runCatching { Library.scan(getApplication()) }.getOrDefault(emptyList())
+            try {
+                val list = withContext(Dispatchers.IO) {
+                    runCatching { Library.scan(getApplication()) }.getOrDefault(emptyList())
+                }
+                all.value = list
+            } finally {
+                loading.value = false
             }
-            all.value = list
-            loading.value = false
         }
     }
 
@@ -93,9 +99,25 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         language.value = safe
     }
 
-    fun setAccent(a: Accent) {
-        store.accent = a.key
-        accent.value = a
+    private fun readAccent(value: String): Color = runCatching {
+        Color(android.graphics.Color.parseColor(value))
+    }.getOrElse { Accent.from(value).color }
+
+    fun setAccent(value: Color) {
+        val argb = value.toArgb()
+        val opaque = Color(android.graphics.Color.rgb(
+            android.graphics.Color.red(argb),
+            android.graphics.Color.green(argb),
+            android.graphics.Color.blue(argb),
+        ))
+        store.accent = String.format(
+            java.util.Locale.ROOT,
+            "#%02X%02X%02X",
+            android.graphics.Color.red(argb),
+            android.graphics.Color.green(argb),
+            android.graphics.Color.blue(argb),
+        )
+        accent.value = opaque
     }
 
     fun block(folder: String) {

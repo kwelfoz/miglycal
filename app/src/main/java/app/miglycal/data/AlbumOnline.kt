@@ -70,10 +70,11 @@ object AlbumOnline {
 
     suspend fun info(artist: String, album: String): AlbumInfo? = withContext(Dispatchers.IO) {
         if (artist.isBlank() || album.isBlank()) return@withContext null
-        val url = "https://ws.audioscrobbler.com/2.0/?method=album.getinfo" +
-            "&artist=${enc(artist)}&album=${enc(album)}&api_key=$API_KEY&format=json&autocorrect=1&lang=en"
-        val source = runCatching { request(url).optJSONObject("album") }.getOrNull()
-            ?: return@withContext null
+        val source = listOf(album, AlbumNames.baseTitle(album)).distinct().firstNotNullOfOrNull { candidate ->
+            val url = "https://ws.audioscrobbler.com/2.0/?method=album.getinfo" +
+                "&artist=${enc(artist)}&album=${enc(candidate)}&api_key=$API_KEY&format=json&autocorrect=1&lang=en"
+            runCatching { request(url).optJSONObject("album") }.getOrNull()
+        } ?: return@withContext null
 
         val images = source.optJSONArray("image")
         val image = images?.let { array ->
