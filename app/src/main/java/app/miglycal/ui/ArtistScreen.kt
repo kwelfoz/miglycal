@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.miglycal.AppViewModel
 import app.miglycal.data.ArtistInfo
+import app.miglycal.data.AlbumNames
 import app.miglycal.data.ArtistNames
 import app.miglycal.data.ArtistOnline
 import app.miglycal.data.Track
