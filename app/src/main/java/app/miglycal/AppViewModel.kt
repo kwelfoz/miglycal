@@ -13,6 +13,8 @@ import app.miglycal.data.Track
 import app.miglycal.player.PlayerController
 import app.miglycal.ui.Accent
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -35,6 +37,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val setupCompleted = MutableStateFlow(store.setupCompleted)
     val playlists = MutableStateFlow(store.loadPlaylists())
     val loading = MutableStateFlow(false)
+
+    // Dragging the colour wheel can emit many values per second. Keep the UI live,
+    // but debounce disk writes so each pointer movement does not enqueue a preference write.
+    private var accentPersistenceJob: Job? = null
+    private var pendingAccent: String? = null
 
     /** Faixas visíveis (sem as pastas bloqueadas). */
     val tracks: StateFlow<List<Track>> = combine(all, blocked, musicFolders) { a, b, folders ->
@@ -105,19 +112,34 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setAccent(value: Color) {
         val argb = value.toArgb()
-        val opaque = Color(android.graphics.Color.rgb(
-            android.graphics.Color.red(argb),
-            android.graphics.Color.green(argb),
-            android.graphics.Color.blue(argb),
-        ))
-        store.accent = String.format(
+        val opaque = Color(
+            android.graphics.Color.rgb(
+                android.graphics.Color.red(argb),
+                android.graphics.Color.green(argb),
+                android.graphics.Color.blue(argb),
+            )
+        )
+        if (accent.value == opaque) return
+
+        // Update Compose immediately for a responsive preview.
+        accent.value = opaque
+
+        val encoded = String.format(
             java.util.Locale.ROOT,
             "#%02X%02X%02X",
             android.graphics.Color.red(argb),
             android.graphics.Color.green(argb),
             android.graphics.Color.blue(argb),
         )
-        accent.value = opaque
+        pendingAccent = encoded
+        accentPersistenceJob?.cancel()
+        accentPersistenceJob = viewModelScope.launch {
+            delay(250)
+            pendingAccent?.let { latest ->
+                store.accent = latest
+                pendingAccent = null
+            }
+        }
     }
 
     fun block(folder: String) {
@@ -200,6 +222,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     override fun onCleared() {
+        accentPersistenceJob?.cancel()
+        pendingAccent?.let { store.accent = it }
+        pendingAccent = null
         player.release()
     }
 }
