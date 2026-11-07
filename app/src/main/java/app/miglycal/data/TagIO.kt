@@ -194,7 +194,10 @@ object TagIO {
         put(FieldKey.DISC_NO, t.disc)
         put(FieldKey.GENRE, t.genre)
         put(FieldKey.COMMENT, t.comment)
-        if (lyrics != null) put(FieldKey.LYRICS, lyrics)
+        if (lyrics != null) {
+            runCatching { tag.deleteField(FieldKey.LYRICS) }
+            if (lyrics.isNotBlank()) tag.setField(FieldKey.LYRICS, lyrics.trim())
+        }
 
         if (cover != null) {
             val ext = if (cover.size > 4 && cover[1] == 0x50.toByte()) "png" else "jpg"

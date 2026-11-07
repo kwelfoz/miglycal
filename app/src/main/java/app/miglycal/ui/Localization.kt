@@ -165,7 +165,13 @@ fun localizeText(raw: String, language: String): String {
         "guardado." to "saved.",
         "a guardar..." to "saving...",
         "letra não encontrada." to "lyrics not found.",
-        "sem letra. abre [tags] para procurar online." to "no lyrics. Open [tags] to search online."
+        "sem letra. abre [tags] para procurar online." to "no lyrics. Open [tags] to search online.",
+        "roda de cores" to "colour wheel",
+        "mais claro" to "lighter",
+        "mais escuro" to "darker",
+        "não foi possível ler o ficheiro" to "could not read the file",
+        "não foi possível escrever no ficheiro" to "could not write the file",
+        "não foram selecionados campos para alterar" to "no fields were selected for editing"
     )
 
     val translated = if (english) {
@@ -179,6 +185,7 @@ fun localizeText(raw: String, language: String): String {
         out = out
             .replace(Regex("^(\\d+) faixas · (\\d+) pastas$"), "$1 tracks · $2 folders")
             .replace(Regex("^(\\d+) faixas$"), "$1 tracks")
+            .replace(Regex("^(\\d+) faixa\\(s\\)$"), "$1 tracks")
             .replace(Regex("^(\\d+) track\\(s\\) · (\\d+) album\\(s\\)$"), "$1 tracks · $2 albums")
             .replace(Regex("^(\\d+) track\\(s\\)$"), "$1 tracks")
             .replace(Regex("^(\\d+) faixas · aleat:(.+) · rep:(.+)$"), "$1 tracks · shuffle:$2 · repeat:$3")

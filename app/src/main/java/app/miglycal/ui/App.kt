@@ -24,6 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import app.miglycal.AppViewModel
 import app.miglycal.data.Track
+import app.miglycal.data.AlbumNames
 
 /** Ecrãs de detalhe empilhados por cima do separador atual. */
 sealed interface Detail
@@ -63,7 +64,7 @@ private fun MainShell(vm: AppViewModel) {
     fun pop() { if (stack.isNotEmpty()) stack.removeAt(stack.lastIndex) }
     fun openAlbum(track: Track) {
         val candidates = vm.tracks.value.filter {
-            it.album.equals(track.album, ignoreCase = true)
+            AlbumNames.sameRelease(it.album, track.album)
         }
         stack.add(DAlbum(track.album, track.artist, candidates.ifEmpty { listOf(track) }))
     }
@@ -128,12 +129,28 @@ private fun MainShell(vm: AppViewModel) {
             enter = slideInVertically { it },
             exit = slideOutVertically { it },
         ) {
-            FullPlayer(vm, onClose = { full = false }) { path ->
-                vm.allByPath.value[path]?.let {
+            FullPlayer(
+                vm,
+                onClose = { full = false },
+                onTags = { path ->
+                    vm.allByPath.value[path]?.let {
+                        full = false
+                        stack.add(DTags(it))
+                    }
+                },
+                onArtist = { name ->
                     full = false
-                    stack.add(DTags(it))
-                }
-            }
+                    stack.add(DArtist(name))
+                },
+                onAlbum = {
+                    vm.player.state.value.path?.let { path ->
+                        vm.allByPath.value[path]?.let { track ->
+                            full = false
+                            openAlbum(track)
+                        }
+                    }
+                },
+            )
         }
     }
 

@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.miglycal.AppViewModel
 import app.miglycal.data.AudioInfo
+import app.miglycal.data.ArtistNames
 import app.miglycal.data.LoadedLyrics
 import app.miglycal.data.LyricsStore
 import app.miglycal.data.Rep
@@ -91,7 +92,7 @@ fun MiniPlayer(vm: AppViewModel, onOpen: () -> Unit) {
 // ----------------------------------------------------------------- leitor grande
 
 @Composable
-fun FullPlayer(vm: AppViewModel, onClose: () -> Unit, onTags: (String) -> Unit) {
+fun FullPlayer(vm: AppViewModel, onClose: () -> Unit, onTags: (String) -> Unit, onArtist: (String) -> Unit, onAlbum: () -> Unit) {
     val p = LocalPal.current
     val st by vm.player.state.collectAsState()
     val pos by rememberPosition(vm, st.playing)
@@ -128,8 +129,22 @@ fun FullPlayer(vm: AppViewModel, onClose: () -> Unit, onTags: (String) -> Unit) 
 
         Spacer(Modifier.height(14.dp))
         Txt(st.title, size = 20.sp, bold = true, maxLines = 2)
-        Txt(st.artist, color = p.accent, size = 14.sp, maxLines = 1)
-        Txt(st.album, color = p.dim, size = 12.sp, maxLines = 1)
+        Txt(
+            st.artist,
+            color = p.accent,
+            size = 14.sp,
+            maxLines = 1,
+            modifier = Modifier.clickable(enabled = st.artist.isNotBlank()) {
+                ArtistNames.split(st.artist).firstOrNull()?.let(onArtist)
+            },
+        )
+        Txt(
+            st.album,
+            color = p.dim,
+            size = 12.sp,
+            maxLines = 1,
+            modifier = Modifier.clickable(enabled = st.album.isNotBlank(), onClick = onAlbum),
+        )
         Spacer(Modifier.height(12.dp))
 
         TermBar(frac, onSeek = { vm.player.seekFraction(it) })

@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,17 +32,21 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
@@ -280,15 +286,14 @@ fun TrackRow(
                         modifier = if (onArtistClick != null) Modifier.clickable { onArtistClick(artist) } else Modifier,
                     )
                 }
-                Txt(" · ", color = p.dim, size = 11.sp)
-                Txt(
-                    track.album,
-                    color = if (onAlbumClick != null) p.accent else p.dim,
-                    size = 11.sp,
-                    maxLines = 1,
-                    modifier = if (onAlbumClick != null) Modifier.clickable { onAlbumClick(track) } else Modifier,
-                )
             }
+            Txt(
+                track.album,
+                color = if (onAlbumClick != null) p.accent else p.dim,
+                size = 11.sp,
+                maxLines = 1,
+                modifier = if (onAlbumClick != null) Modifier.clickable { onAlbumClick(track) } else Modifier,
+            )
         }
         Txt(fmt(track.durationMs), color = p.dim, size = 11.sp, modifier = Modifier.padding(horizontal = 6.dp))
         if (menu.isNotEmpty()) {
@@ -309,7 +314,7 @@ fun TrackRow(
 fun CoverImage(path: String?, modifier: Modifier = Modifier, version: Int = 0) {
     val p = LocalPal.current
     val bmp by produceState<android.graphics.Bitmap?>(null, path, version) {
-        value = if (path == null) null else withContext(Dispatchers.IO) { Art.load(path) }
+        value = if (path == null) null else withContext(Dispatchers.IO) { Art.load(path, max = 320) }
     }
     Box(modifier.background(p.surface).border(1.dp, p.line), contentAlignment = Alignment.Center) {
         val b = bmp
@@ -317,6 +322,128 @@ fun CoverImage(path: String?, modifier: Modifier = Modifier, version: Int = 0) {
             Image(b.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         } else {
             Txt("no cover", color = p.dim, size = 11.sp)
+        }
+    }
+}
+
+
+/** Compact accent editor; advanced controls stay collapsed until requested. */
+@Composable
+fun AccentColorPicker(color: Color, onColorChange: (Color) -> Unit) {
+    val p = LocalPal.current
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    var hex by remember { mutableStateOf("#55E67A") }
+    var red by remember { mutableStateOf("85") }
+    var green by remember { mutableStateOf("230") }
+    var blue by remember { mutableStateOf("122") }
+    LaunchedEffect(color) {
+        val argb = color.toArgb()
+        hex = String.format("#%02X%02X%02X", android.graphics.Color.red(argb), android.graphics.Color.green(argb), android.graphics.Color.blue(argb))
+        red = android.graphics.Color.red(argb).toString()
+        green = android.graphics.Color.green(argb).toString()
+        blue = android.graphics.Color.blue(argb).toString()
+    }
+    fun applyRgb(r: String, g: String, b: String) {
+        val rv = r.toIntOrNull(); val gv = g.toIntOrNull(); val bv = b.toIntOrNull()
+        if (rv != null && gv != null && bv != null && rv in 0..255 && gv in 0..255 && bv in 0..255) {
+            onColorChange(Color(android.graphics.Color.rgb(rv, gv, bv)))
+        }
+    }
+    fun adjustBrightness(delta: Float) {
+        val hsv = FloatArray(3)
+        android.graphics.Color.colorToHSV(color.toArgb(), hsv)
+        hsv[2] = (hsv[2] + delta).coerceIn(0.08f, 1f)
+        onColorChange(Color(android.graphics.Color.HSVToColor(hsv)))
+    }
+    Column(Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(18.dp).background(color).border(1.dp, p.line))
+            Spacer(Modifier.width(8.dp))
+            Txt(hex, color = p.dim, size = 11.sp, modifier = Modifier.weight(1f))
+            Btn(if (expanded) "menos cores" else "personalizado", { expanded = !expanded }, active = expanded, size = 11.sp)
+        }
+        if (expanded) {
+            Txt("roda de cores", color = p.accent, size = 11.sp, bold = true)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                ColorWheel(color, onColorChange)
+                Column(Modifier.weight(1f).padding(start = 8.dp)) {
+                    Box(Modifier.size(34.dp).background(color).border(1.dp, p.line))
+                    Spacer(Modifier.height(6.dp))
+                    Btn("mais claro", { adjustBrightness(0.10f) }, size = 11.sp)
+                    Btn("mais escuro", { adjustBrightness(-0.10f) }, size = 11.sp)
+                }
+            }
+            TermField("hex", hex, { value ->
+                hex = value
+                val digits = value.trim().removePrefix("#")
+                if (digits.matches(Regex("[0-9a-fA-F]{6}"))) onColorChange(Color(android.graphics.Color.parseColor("#$digits")))
+            })
+            TermField("R", red, { red = it; applyRgb(it, green, blue) }, keyboardType = KeyboardType.Number)
+            TermField("G", green, { green = it; applyRgb(red, it, blue) }, keyboardType = KeyboardType.Number)
+            TermField("B", blue, { blue = it; applyRgb(red, green, it) }, keyboardType = KeyboardType.Number)
+        }
+    }
+}
+
+@Composable
+private fun ColorWheel(color: Color, onColorChange: (Color) -> Unit) {
+    val selected = rememberUpdatedState(color)
+    val change = rememberUpdatedState(onColorChange)
+    val wheelColors = remember {
+        (0..360 step 30).map { hue -> Color(android.graphics.Color.HSVToColor(floatArrayOf(hue.toFloat(), 1f, 1f))) }
+    }
+    fun updateAt(point: Offset, width: Float, height: Float) {
+        val center = Offset(width / 2f, height / 2f)
+        val dx = point.x - center.x; val dy = point.y - center.y
+        val radius = minOf(width, height) * 0.45f
+        val distance = kotlin.math.sqrt(dx * dx + dy * dy)
+        if (distance <= radius) {
+            val hsv = FloatArray(3)
+            android.graphics.Color.colorToHSV(selected.value.toArgb(), hsv)
+            hsv[0] = (Math.toDegrees(kotlin.math.atan2(dy, dx).toDouble()).toFloat() + 360f) % 360f
+            hsv[1] = (distance / radius).coerceIn(0f, 1f)
+            change.value(Color(android.graphics.Color.HSVToColor(hsv)))
+        }
+    }
+    Canvas(
+        Modifier.size(190.dp)
+            .pointerInput(Unit) {
+                detectTapGestures { updateAt(it, size.width.toFloat(), size.height.toFloat()) }
+            }
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragStart = { updateAt(it, size.width.toFloat(), size.height.toFloat()) },
+                    onDrag = { change, _ -> updateAt(change.position, size.width.toFloat(), size.height.toFloat()) },
+                )
+            }
+    ) {
+        val radius = minOf(size.width, size.height) * 0.45f
+        val center = Offset(size.width / 2f, size.height / 2f)
+        drawCircle(brush = Brush.sweepGradient(wheelColors), radius = radius, center = center)
+        drawCircle(brush = Brush.radialGradient(listOf(Color.White, Color.Transparent), center = center, radius = radius), radius = radius, center = center)
+        val hsv = FloatArray(3)
+        android.graphics.Color.colorToHSV(color.toArgb(), hsv)
+        val angle = Math.toRadians(hsv[0].toDouble())
+        val markerRadius = radius * hsv[1]
+        val marker = Offset(center.x + kotlin.math.cos(angle).toFloat() * markerRadius, center.y + kotlin.math.sin(angle).toFloat() * markerRadius)
+        drawCircle(Color.Black, radius = 9.dp.toPx(), center = marker)
+        drawCircle(Color.White, radius = 6.dp.toPx(), center = marker)
+        drawCircle(color, radius = 4.dp.toPx(), center = marker)
+    }
+}
+
+/** Artist values shown as removable chips while keeping the editable source string. */
+@Composable
+fun ArtistChipsField(label: String, value: String, onChange: (String) -> Unit) {
+    val artists = remember(value) { app.miglycal.data.ArtistNames.split(value) }
+    Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        TermField(label, value, onChange)
+        Flow {
+            artists.forEach { artist ->
+                Btn("× $artist", {
+                    onChange(artists.filterNot { it.equals(artist, ignoreCase = true) }.joinToString(", "))
+                }, size = 10.sp)
+            }
         }
     }
 }

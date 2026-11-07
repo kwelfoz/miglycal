@@ -30,16 +30,19 @@ object LyricsStore {
         lrc.lines().joinToString("\n") { ts.replace(it, "").trim() }
 
     fun load(path: String): LoadedLyrics {
-        val f = lrcFile(path)
-        if (f.exists()) {
-            val synced = runCatching { parse(f.readText()) }.getOrNull()
-            if (!synced.isNullOrEmpty()) return LoadedLyrics(synced, null)
-        }
-        val tagText = TagIO.readLyrics(path)
-        if (!tagText.isNullOrBlank()) {
-            val synced = parse(tagText)
-            return if (synced.size > 3) LoadedLyrics(synced, null) else LoadedLyrics(null, tagText)
-        }
-        return LoadedLyrics(null, null)
+        // The embedded tag is the most recently edited source and must win over old sidecars.
+        val tagText = TagIO.readLyrics(path)?.trim()?.takeIf { it.isNotBlank() }
+        val taggedSynced = tagText?.let(::parse).orEmpty()
+        if (taggedSynced.isNotEmpty()) return LoadedLyrics(taggedSynced, null)
+
+        val sidecarText = runCatching {
+            lrcFile(path).takeIf { it.isFile && it.length() > 0L }?.readText()
+        }.getOrNull()
+        val sidecarSynced = sidecarText?.let(::parse).orEmpty()
+        if (sidecarSynced.isNotEmpty()) return LoadedLyrics(sidecarSynced, null)
+
+        // Short LRC files (one or two lines) are still synced lyrics.
+        val plain = tagText ?: sidecarText?.trim()?.takeIf { it.isNotBlank() }
+        return LoadedLyrics(null, plain)
     }
 }

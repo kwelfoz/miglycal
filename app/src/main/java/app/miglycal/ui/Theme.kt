@@ -2,6 +2,7 @@ package app.miglycal.ui
 
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
@@ -11,6 +12,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 
 /** Paletas selecionáveis nas definições. */
@@ -43,8 +46,8 @@ val LocalPal = staticCompositionLocalOf { Pal(Accent.GREEN.color) }
 val LocalLanguage = staticCompositionLocalOf { "pt" }
 
 @Composable
-fun MiglycalTheme(accent: Accent, language: String, content: @Composable () -> Unit) {
-    val pal = remember(accent) { Pal(accent.color) }
+fun MiglycalTheme(accent: Color, language: String, content: @Composable () -> Unit) {
+    val pal = remember(accent) { Pal(accent) }
     val scheme = darkColorScheme(
         primary = pal.accent,
         onPrimary = pal.bg,
@@ -73,6 +76,11 @@ fun MiglycalTheme(accent: Accent, language: String, content: @Composable () -> U
         extraLarge = RoundedCornerShape(0.dp),
     )
     CompositionLocalProvider(LocalPal provides pal, LocalLanguage provides language) {
-        MaterialTheme(colorScheme = scheme, shapes = sharp, content = content)
+        MaterialTheme(colorScheme = scheme, shapes = sharp) {
+            CompositionLocalProvider(
+                LocalTextStyle provides TextStyle(fontFamily = FontFamily.Monospace),
+                content = content,
+            )
+        }
     }
 }
