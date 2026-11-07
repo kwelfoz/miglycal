@@ -10,7 +10,7 @@ import java.io.File
 
 /** Capas embebidas nos ficheiros (com fallback para cover/folder.jpg na pasta). */
 object Art {
-    private val cache = LruCache<String, Bitmap>(24)
+    private val cache = LruCache<String, Bitmap>(16)
 
     suspend fun load(path: String, max: Int = 900): Bitmap? = withContext(Dispatchers.IO) {
         cache.get(path) ?: runCatching { readEmbedded(path, max) ?: readFolderArt(path, max) }
