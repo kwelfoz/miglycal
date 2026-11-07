@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -325,10 +326,11 @@ fun CoverImage(path: String?, modifier: Modifier = Modifier, version: Int = 0) {
 }
 
 
-/** Interactive HSV colour wheel with exact HEX and RGB controls. */
+/** Compact accent editor; advanced controls stay collapsed until requested. */
 @Composable
 fun AccentColorPicker(color: Color, onColorChange: (Color) -> Unit) {
     val p = LocalPal.current
+    var expanded by rememberSaveable { mutableStateOf(false) }
     var hex by remember { mutableStateOf("#55E67A") }
     var red by remember { mutableStateOf("85") }
     var green by remember { mutableStateOf("230") }
@@ -341,9 +343,7 @@ fun AccentColorPicker(color: Color, onColorChange: (Color) -> Unit) {
         blue = android.graphics.Color.blue(argb).toString()
     }
     fun applyRgb(r: String, g: String, b: String) {
-        val rv = r.toIntOrNull()
-        val gv = g.toIntOrNull()
-        val bv = b.toIntOrNull()
+        val rv = r.toIntOrNull(); val gv = g.toIntOrNull(); val bv = b.toIntOrNull()
         if (rv != null && gv != null && bv != null && rv in 0..255 && gv in 0..255 && bv in 0..255) {
             onColorChange(Color(android.graphics.Color.rgb(rv, gv, bv)))
         }
@@ -355,26 +355,32 @@ fun AccentColorPicker(color: Color, onColorChange: (Color) -> Unit) {
         onColorChange(Color(android.graphics.Color.HSVToColor(hsv)))
     }
     Column(Modifier.fillMaxWidth()) {
-        Txt("roda de cores", color = p.accent, size = 11.sp, bold = true)
         Row(verticalAlignment = Alignment.CenterVertically) {
-            ColorWheel(color, onColorChange)
-            Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                Box(Modifier.size(42.dp).background(color).border(1.dp, p.line))
-                Spacer(Modifier.height(8.dp))
-                Btn("mais claro", { adjustBrightness(0.10f) })
-                Btn("mais escuro", { adjustBrightness(-0.10f) })
-            }
+            Box(Modifier.size(18.dp).background(color).border(1.dp, p.line))
+            Spacer(Modifier.width(8.dp))
+            Txt(hex, color = p.dim, size = 11.sp, modifier = Modifier.weight(1f))
+            Btn(if (expanded) "menos cores" else "personalizado", { expanded = !expanded }, active = expanded, size = 11.sp)
         }
-        TermField("hex", hex, { value ->
-            hex = value
-            val digits = value.trim().removePrefix("#")
-            if (digits.matches(Regex("[0-9a-fA-F]{6}"))) {
-                onColorChange(Color(android.graphics.Color.parseColor("#${digits}")))
+        if (expanded) {
+            Txt("roda de cores", color = p.accent, size = 11.sp, bold = true)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                ColorWheel(color, onColorChange)
+                Column(Modifier.weight(1f).padding(start = 8.dp)) {
+                    Box(Modifier.size(34.dp).background(color).border(1.dp, p.line))
+                    Spacer(Modifier.height(6.dp))
+                    Btn("mais claro", { adjustBrightness(0.10f) }, size = 11.sp)
+                    Btn("mais escuro", { adjustBrightness(-0.10f) }, size = 11.sp)
+                }
             }
-        })
-        TermField("R", red, { red = it; applyRgb(it, green, blue) }, keyboardType = KeyboardType.Number)
-        TermField("G", green, { green = it; applyRgb(red, it, blue) }, keyboardType = KeyboardType.Number)
-        TermField("B", blue, { blue = it; applyRgb(red, green, it) }, keyboardType = KeyboardType.Number)
+            TermField("hex", hex, { value ->
+                hex = value
+                val digits = value.trim().removePrefix("#")
+                if (digits.matches(Regex("[0-9a-fA-F]{6}"))) onColorChange(Color(android.graphics.Color.parseColor("#$digits")))
+            })
+            TermField("R", red, { red = it; applyRgb(it, green, blue) }, keyboardType = KeyboardType.Number)
+            TermField("G", green, { green = it; applyRgb(red, it, blue) }, keyboardType = KeyboardType.Number)
+            TermField("B", blue, { blue = it; applyRgb(red, green, it) }, keyboardType = KeyboardType.Number)
+        }
     }
 }
 
@@ -383,45 +389,42 @@ private fun ColorWheel(color: Color, onColorChange: (Color) -> Unit) {
     val selected = rememberUpdatedState(color)
     val change = rememberUpdatedState(onColorChange)
     val wheelColors = remember {
-        (0..360 step 30).map { hue ->
-            Color(android.graphics.Color.HSVToColor(floatArrayOf(hue.toFloat(), 1f, 1f)))
+        (0..360 step 30).map { hue -> Color(android.graphics.Color.HSVToColor(floatArrayOf(hue.toFloat(), 1f, 1f))) }
+    }
+    fun updateAt(point: Offset, width: Float, height: Float) {
+        val center = Offset(width / 2f, height / 2f)
+        val dx = point.x - center.x; val dy = point.y - center.y
+        val radius = minOf(width, height) * 0.45f
+        val distance = kotlin.math.sqrt(dx * dx + dy * dy)
+        if (distance <= radius) {
+            val hsv = FloatArray(3)
+            android.graphics.Color.colorToHSV(selected.value.toArgb(), hsv)
+            hsv[0] = (Math.toDegrees(kotlin.math.atan2(dy, dx).toDouble()).toFloat() + 360f) % 360f
+            hsv[1] = (distance / radius).coerceIn(0f, 1f)
+            change.value(Color(android.graphics.Color.HSVToColor(hsv)))
         }
     }
-    Canvas(Modifier.size(210.dp).pointerInput(Unit) {
-        detectTapGestures { point ->
-            val cx = size.width / 2f
-            val cy = size.height / 2f
-            val dx = point.x - cx
-            val dy = point.y - cy
-            val radius = minOf(size.width, size.height) * 0.45f
-            val distance = kotlin.math.sqrt(dx * dx + dy * dy)
-            if (distance <= radius) {
-                val hue = (Math.toDegrees(kotlin.math.atan2(dy, dx).toDouble()).toFloat() + 360f) % 360f
-                val hsv = FloatArray(3)
-                android.graphics.Color.colorToHSV(selected.value.toArgb(), hsv)
-                hsv[0] = hue
-                hsv[1] = (distance / radius).coerceIn(0f, 1f)
-                change.value(Color(android.graphics.Color.HSVToColor(hsv)))
+    Canvas(
+        Modifier.size(190.dp)
+            .pointerInput(Unit) {
+                detectTapGestures { updateAt(it, size.width.toFloat(), size.height.toFloat()) }
             }
-        }
-    }) {
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragStart = { updateAt(it, size.width.toFloat(), size.height.toFloat()) },
+                    onDrag = { change, _ -> updateAt(change.position, size.width.toFloat(), size.height.toFloat()) },
+                )
+            }
+    ) {
         val radius = minOf(size.width, size.height) * 0.45f
         val center = Offset(size.width / 2f, size.height / 2f)
         drawCircle(brush = Brush.sweepGradient(wheelColors), radius = radius, center = center)
-        // Fade to white towards the centre so the wheel also previews saturation.
-        drawCircle(
-            brush = Brush.radialGradient(listOf(Color.White, Color.Transparent), center = center, radius = radius),
-            radius = radius,
-            center = center,
-        )
+        drawCircle(brush = Brush.radialGradient(listOf(Color.White, Color.Transparent), center = center, radius = radius), radius = radius, center = center)
         val hsv = FloatArray(3)
         android.graphics.Color.colorToHSV(color.toArgb(), hsv)
         val angle = Math.toRadians(hsv[0].toDouble())
         val markerRadius = radius * hsv[1]
-        val marker = Offset(
-            center.x + kotlin.math.cos(angle).toFloat() * markerRadius,
-            center.y + kotlin.math.sin(angle).toFloat() * markerRadius,
-        )
+        val marker = Offset(center.x + kotlin.math.cos(angle).toFloat() * markerRadius, center.y + kotlin.math.sin(angle).toFloat() * markerRadius)
         drawCircle(Color.Black, radius = 9.dp.toPx(), center = marker)
         drawCircle(Color.White, radius = 6.dp.toPx(), center = marker)
         drawCircle(color, radius = 4.dp.toPx(), center = marker)
