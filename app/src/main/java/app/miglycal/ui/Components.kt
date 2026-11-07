@@ -313,7 +313,7 @@ fun TrackRow(
 fun CoverImage(path: String?, modifier: Modifier = Modifier, version: Int = 0) {
     val p = LocalPal.current
     val bmp by produceState<android.graphics.Bitmap?>(null, path, version) {
-        value = if (path == null) null else withContext(Dispatchers.IO) { Art.load(path) }
+        value = if (path == null) null else withContext(Dispatchers.IO) { Art.load(path, max = 320) }
     }
     Box(modifier.background(p.surface).border(1.dp, p.line), contentAlignment = Alignment.Center) {
         val b = bmp
